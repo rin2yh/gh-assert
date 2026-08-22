@@ -1,3 +1,7 @@
 releaseBranch = main
 vPrefix = true
 release = true
+[tagpr]
+	vPrefix = true
+	releaseBranch = main
+	versionFile = -
