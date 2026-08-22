@@ -1,0 +1,16 @@
+env:
+  ENVIRONMENT:
+    required: true
+    type:
+      string:
+        enum: [staging, production]
+        pattern: '^[a-z]+$'
+  RETRIES:
+    required: false
+    type:
+      integer:
+        min: 0
+        max: 5
+  DRY_RUN:
+    type:
+      boolean: {}

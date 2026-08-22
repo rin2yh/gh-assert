@@ -1,0 +1,39 @@
+name: gh-assert
+description: Assert GitHub Actions environment variables from a contract.
+inputs:
+  contract:
+    description: Path to the env contract file.
+    required: false
+  version:
+    description: Release tag to download, or latest.
+    required: false
+    default: latest
+runs:
+  using: composite
+  steps:
+    - name: Run gh-assert
+      shell: bash
+      env:
+        GH_ASSERT_CONTRACT: ${{ inputs.contract }}
+        GH_ASSERT_VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        : "${GH_ASSERT_VERSION:=latest}"
+
+        repo="rin2yh/gh-assert"
+        asset="gh-assert-linux-amd64"
+        if [[ "$GH_ASSERT_VERSION" == "latest" ]]; then
+          base_url="https://github.com/$repo/releases/latest/download"
+        else
+          base_url="https://github.com/$repo/releases/download/$GH_ASSERT_VERSION"
+        fi
+
+        binary="$RUNNER_TEMP/$asset"
+        curl --fail --location --retry 3 "$base_url/$asset" --output "$binary"
+        curl --fail --location --retry 3 "$base_url/$asset.sha256" --output "$binary.sha256"
+        (cd "$(dirname "$binary")" && sha256sum -c "$(basename "$binary").sha256")
+        chmod +x "$binary"
+        if [[ -n "$GH_ASSERT_CONTRACT" ]]; then
+          exec "$binary" "$GH_ASSERT_CONTRACT"
+        fi
+        exec "$binary"

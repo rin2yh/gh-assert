@@ -1,0 +1,1 @@
+testdata/schema-error.yml:5:9: min must not be greater than max

@@ -1,0 +1,5 @@
+env:
+  TOKEN:
+    default: x
+    type:
+      string: {}

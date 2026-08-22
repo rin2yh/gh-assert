@@ -1,0 +1,6 @@
+env:
+  RETRIES:
+    type:
+      integer:
+        min: 5
+        max: 2
