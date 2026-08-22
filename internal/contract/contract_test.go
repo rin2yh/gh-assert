@@ -29,7 +29,7 @@ func TestParseReportsDiagnostics(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertGolden(t, tt.file+".golden", parseError(t, tt.file).Error())
+			assertGolden(t, tt.file+".golden", assertParseFails(t, tt.file))
 		})
 	}
 }
@@ -50,7 +50,7 @@ func TestParseRejectsUnsupportedDefinitions(t *testing.T) {
 		{name: "inputs invalid pattern", file: "inputs-bad-pattern"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) { parseError(t, tt.file) })
+		t.Run(tt.name, func(t *testing.T) { assertParseFails(t, tt.file) })
 	}
 }
 
@@ -109,13 +109,13 @@ func parseFile(t *testing.T, name string) (*Contract, error) {
 	return parse(path, data)
 }
 
-func parseError(t *testing.T, name string) error {
+func assertParseFails(t *testing.T, name string) string {
 	t.Helper()
 	_, err := parseFile(t, name)
 	if err == nil {
 		t.Fatal("expected an error")
 	}
-	return err
+	return err.Error()
 }
 
 func ruleNames(rules map[string]Rule) string {
