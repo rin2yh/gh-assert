@@ -17,12 +17,17 @@ func writeEvent(t *testing.T, payload string) string {
 	return path
 }
 
-func TestDispatchInputsReadsEventPayload(t *testing.T) {
-	path := writeEvent(t, `{"inputs":{"environment":"staging","retries":3,"dry-run":true,"note":null}}`)
-	t.Setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-	t.Setenv("GITHUB_EVENT_PATH", path)
+func TestName(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", Dispatch)
+	if got := Name(); got != Dispatch {
+		t.Fatalf("got %q, want %q", got, Dispatch)
+	}
+}
 
-	inputs, err := DispatchInputs()
+func TestInputsReadsEventPayload(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, `{"inputs":{"environment":"staging","retries":3,"dry-run":true,"note":null}}`))
+
+	inputs, err := Inputs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,11 +37,10 @@ func TestDispatchInputsReadsEventPayload(t *testing.T) {
 	}
 }
 
-func TestDispatchInputsWithoutInputsKey(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+func TestInputsWithoutInputsKey(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, `{"ref":"refs/heads/main"}`))
 
-	inputs, err := DispatchInputs()
+	inputs, err := Inputs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,39 +49,34 @@ func TestDispatchInputsWithoutInputsKey(t *testing.T) {
 	}
 }
 
-func TestDispatchInputsRejectsUnavailableEvent(t *testing.T) {
+func TestInputsRejectsUnreadablePayload(t *testing.T) {
 	tests := []struct {
-		name      string
-		eventName string
-		payload   string
-		noPath    bool
+		name    string
+		payload string
+		noPath  bool
 	}{
-		{name: "no event name", eventName: ""},
-		{name: "other event", eventName: "push"},
-		{name: "no event path", eventName: "workflow_dispatch", noPath: true},
-		{name: "invalid json", eventName: "workflow_dispatch", payload: "{"},
-		{name: "non scalar input", eventName: "workflow_dispatch", payload: `{"inputs":{"matrix":["a"]}}`},
+		{name: "no event path", noPath: true},
+		{name: "invalid json", payload: "{"},
+		{name: "non scalar input", payload: `{"inputs":{"matrix":["a"]}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GITHUB_EVENT_NAME", tt.eventName)
 			if tt.noPath {
 				t.Setenv("GITHUB_EVENT_PATH", "")
 			} else {
 				t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
 			}
-			if _, err := DispatchInputs(); err == nil {
+			if _, err := Inputs(); err == nil {
 				t.Fatal("expected an error")
 			}
 		})
 	}
 }
 
-func TestDispatchInputsRejectsMissingFile(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+func TestInputsRejectsMissingFile(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_PATH", filepath.Join(t.TempDir(), "absent.json"))
 
-	if _, err := DispatchInputs(); err == nil {
+	if _, err := Inputs(); err == nil {
 		t.Fatal("expected an error")
 	}
 }

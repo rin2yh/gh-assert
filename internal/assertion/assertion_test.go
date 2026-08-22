@@ -20,16 +20,9 @@ func loadRuntimeContract(t *testing.T) *contract.Contract {
 	return loadContract(t, "runtime.yml")
 }
 
-func assertViolationCount(t *testing.T, c *contract.Contract, env values, want int) {
+func assertViolationCount(t *testing.T, c *contract.Contract, env, inputs values, want int) {
 	t.Helper()
-	if got := len(Validate(c, env, values(nil))); got != want {
-		t.Fatalf("got %d violations, want %d", got, want)
-	}
-}
-
-func assertInputViolationCount(t *testing.T, c *contract.Contract, inputs values, want int) {
-	t.Helper()
-	if got := len(Validate(c, values(nil), inputs)); got != want {
+	if got := len(Validate(c, env, inputs)); got != want {
 		t.Fatalf("got %d violations, want %d", got, want)
 	}
 }
@@ -46,7 +39,7 @@ func TestValidateRequiredEnvironment(t *testing.T) {
 		{"optional missing", values{"NAME": "staging", "FLAG": "true"}, 0},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) { assertViolationCount(t, c, tt.env, tt.want) })
+		t.Run(tt.name, func(t *testing.T) { assertViolationCount(t, c, tt.env, nil, tt.want) })
 	}
 }
 
@@ -63,7 +56,7 @@ func TestValidateStringConstraints(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			env := values{"NAME": tt.value, "COUNT": "3", "FLAG": "false"}
-			assertViolationCount(t, c, env, tt.want)
+			assertViolationCount(t, c, env, nil, tt.want)
 		})
 	}
 }
@@ -76,14 +69,14 @@ func TestValidateIntegerConstraints(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, c, values{"NAME": "staging", "COUNT": tt.value, "FLAG": "false"}, 1)
+			assertViolationCount(t, c, values{"NAME": "staging", "COUNT": tt.value, "FLAG": "false"}, nil, 1)
 		})
 	}
 }
 
 func TestValidateBooleanType(t *testing.T) {
 	c := loadRuntimeContract(t)
-	assertViolationCount(t, c, values{"NAME": "staging", "COUNT": "3", "FLAG": "yes"}, 1)
+	assertViolationCount(t, c, values{"NAME": "staging", "COUNT": "3", "FLAG": "yes"}, nil, 1)
 }
 
 func TestValidateWorkflowInputs(t *testing.T) {
@@ -102,7 +95,7 @@ func TestValidateWorkflowInputs(t *testing.T) {
 		{"boolean", values{"environment": "staging", "dry-run": "yes"}, 1},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) { assertInputViolationCount(t, c, tt.inputs, tt.want) })
+		t.Run(tt.name, func(t *testing.T) { assertViolationCount(t, c, nil, tt.inputs, tt.want) })
 	}
 }
 

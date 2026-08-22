@@ -2,9 +2,10 @@ package contract
 
 import (
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"testing"
 
@@ -22,17 +23,8 @@ func TestParseValidContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var lines []string
-	for _, section := range sections {
-		rules := c.Rules(section)
-		names := make([]string, 0, len(rules))
-		for name := range rules {
-			names = append(names, name)
-		}
-		sort.Strings(names)
-		lines = append(lines, fmt.Sprintf("%s: %s", section, strings.Join(names, ",")))
-	}
-	assertGolden(t, "valid.golden", strings.Join(lines, "\n"))
+	got := fmt.Sprintf("env: %s\ninputs: %s", ruleNames(c.Env), ruleNames(c.Inputs))
+	assertGolden(t, "valid.golden", got)
 }
 
 func TestParseReportsSectionInTypeErrors(t *testing.T) {
@@ -94,10 +86,10 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
-		section string
+		rules   func(*Contract) map[string]Rule
 	}{
-		{name: "env only", content: "env: {}\n", section: SectionEnv},
-		{name: "inputs only", content: "inputs: {}\n", section: SectionInputs},
+		{name: "env only", content: "env: {}\n", rules: func(c *Contract) map[string]Rule { return c.Env }},
+		{name: "inputs only", content: "inputs: {}\n", rules: func(c *Contract) map[string]Rule { return c.Inputs }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -105,11 +97,15 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if c.Rules(tt.section) == nil {
-				t.Fatalf("%s section was not parsed", tt.section)
+			if tt.rules(c) == nil {
+				t.Fatal("section was not parsed")
 			}
 		})
 	}
+}
+
+func ruleNames(rules map[string]Rule) string {
+	return strings.Join(slices.Sorted(maps.Keys(rules)), ",")
 }
 
 func assertGolden(t *testing.T, filename, got string) {

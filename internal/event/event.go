@@ -9,19 +9,14 @@ import (
 	"strconv"
 )
 
-const dispatch = "workflow_dispatch"
+const Dispatch = "workflow_dispatch"
 
-func DispatchInputs() (map[string]string, error) {
-	name := os.Getenv("GITHUB_EVENT_NAME")
-	if name == "" {
-		return nil, errors.New("an inputs contract requires a GitHub Actions run: GITHUB_EVENT_NAME is not set")
-	}
-	if name != dispatch {
-		return nil, fmt.Errorf("an inputs contract requires a %s run, but the current event is %s", dispatch, name)
-	}
+func Name() string { return os.Getenv("GITHUB_EVENT_NAME") }
+
+func Inputs() (map[string]string, error) {
 	path := os.Getenv("GITHUB_EVENT_PATH")
 	if path == "" {
-		return nil, errors.New("an inputs contract requires GITHUB_EVENT_PATH to be set")
+		return nil, errors.New("GITHUB_EVENT_PATH is not set")
 	}
 	data, err := os.ReadFile(path)
 	if err != nil {

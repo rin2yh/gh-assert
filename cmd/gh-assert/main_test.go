@@ -187,17 +187,18 @@ func TestValidateRejectsExtraArgument(t *testing.T) {
 
 func setEvent(t *testing.T, payload string) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "event.json")
-	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
 	t.Setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-	t.Setenv("GITHUB_EVENT_PATH", path)
+	t.Setenv("GITHUB_EVENT_PATH", writeFile(t, "event.json", payload))
 }
 
 func writeContract(t *testing.T, content string) string {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "contract.yml")
+	return writeFile(t, "contract.yml", content)
+}
+
+func writeFile(t *testing.T, name, content string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
 	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}

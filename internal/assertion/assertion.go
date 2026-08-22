@@ -1,9 +1,9 @@
 package assertion
 
 import (
+	"maps"
 	"os"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -13,6 +13,16 @@ import (
 const (
 	ScopeEnv   = "env"
 	ScopeInput = "input"
+)
+
+type section struct {
+	scope   string
+	subject string
+}
+
+var (
+	envSection   = section{scope: ScopeEnv, subject: "environment variable"}
+	inputSection = section{scope: ScopeInput, subject: "input"}
 )
 
 type source interface {
@@ -39,32 +49,26 @@ func ValidateRuntime(c *contract.Contract, inputs map[string]string) []Violation
 }
 
 func Validate(c *contract.Contract, env, inputs source) []Violation {
-	out := validateSection(c, contract.SectionEnv, ScopeEnv, "environment variable", env)
-	return append(out, validateSection(c, contract.SectionInputs, ScopeInput, "input", inputs)...)
+	out := validateSection(envSection, c.Env, env)
+	return append(out, validateSection(inputSection, c.Inputs, inputs)...)
 }
 
-func validateSection(c *contract.Contract, section, scope, subject string, source source) []Violation {
-	rules := c.Rules(section)
-	names := make([]string, 0, len(rules))
-	for name := range rules {
-		names = append(names, name)
-	}
-	sort.Strings(names)
+func validateSection(section section, rules map[string]contract.Rule, source source) []Violation {
 	var out []Violation
-	for _, name := range names {
+	for _, name := range slices.Sorted(maps.Keys(rules)) {
 		rule := rules[name]
 		value, present := source.Lookup(name)
 		if !present {
 			if rule.Required {
-				out = append(out, Violation{scope, name, rule.Position, "required " + subject + " is not set"})
+				out = append(out, Violation{section.scope, name, rule.Position, "required " + section.subject + " is not set"})
 			}
 			continue
 		}
 		if rule.Required && value == "" {
-			out = append(out, Violation{scope, name, rule.Position, "required " + subject + " is empty"})
+			out = append(out, Violation{section.scope, name, rule.Position, "required " + section.subject + " is empty"})
 			continue
 		}
-		out = append(out, validateValue(scope, name, rule, value)...)
+		out = append(out, validateValue(section.scope, name, rule, value)...)
 	}
 	return out
 }

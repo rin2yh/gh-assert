@@ -142,7 +142,13 @@ func runtimeInputs(loaded []contract.Loaded) (map[string]string, error) {
 		if len(item.Contract.Inputs) == 0 {
 			continue
 		}
-		inputs, err := event.DispatchInputs()
+		switch name := event.Name(); {
+		case name == "":
+			return nil, fmt.Errorf("%s: an inputs contract requires a %s run: GITHUB_EVENT_NAME is not set", item.Path, event.Dispatch)
+		case name != event.Dispatch:
+			return nil, fmt.Errorf("%s: an inputs contract requires a %s run, but the current event is %s", item.Path, event.Dispatch, name)
+		}
+		inputs, err := event.Inputs()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
