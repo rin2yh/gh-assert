@@ -118,6 +118,17 @@ func TestRuntimeRejectsInputsOutsideWorkflowDispatch(t *testing.T) {
 	}
 }
 
+func TestRuntimeAllowsEmptyInputsSectionOutsideWorkflowDispatch(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "push")
+	t.Setenv("GITHUB_EVENT_PATH", "")
+	path := writeContract(t, "inputs: {}\n")
+	code, _, stderr := runCommand([]string{"--contract", path})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
+	}
+}
+
 func TestRuntimeIgnoresEventWithoutInputsContract(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_NAME", "push")
 	t.Setenv("FLAG", "true")

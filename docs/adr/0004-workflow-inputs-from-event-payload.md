@@ -8,7 +8,7 @@ v0.2では `workflow_dispatch` inputsをcontractの対象に追加する。env�
 
 runtime assertionはinputsをGitHub Actionsのevent payload (`GITHUB_EVENT_PATH`) から読み取る。値はすべて文字列として扱い、env contractと同じ制約で検証する。
 
-inputs contractは `workflow_dispatch` の実行のみを対象とする。`GITHUB_EVENT_NAME` が `workflow_dispatch` でない場合、assertionは成功も違反も報告せず、設定エラーとして終了コード2で失敗する。`workflow_call.inputs` はv0.3で扱う。
+inputs ruleを1つ以上持つcontractは `workflow_dispatch` の実行のみを対象とする。`GITHUB_EVENT_NAME` が `workflow_dispatch` でない場合、assertionは成功も違反も報告せず、設定エラーとして終了コード2で失敗する。ruleが無い `inputs: {}` は検証対象を持たないため、`env: {}` と同様にeventを制限しない。`workflow_call.inputs` はv0.3で扱う。
 
 ## Consequences
 

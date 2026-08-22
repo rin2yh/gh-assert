@@ -69,7 +69,7 @@ on:
 
 The Action targets `ubuntu-latest` in v0.2. It downloads the Linux amd64 release binary and verifies its checksum before execution. It exits non-zero when a required variable or input is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
 
-A contract that declares `inputs` asserts only `workflow_dispatch` runs. On any other event the command fails with an exit code of 2 rather than reporting a passing assertion. `workflow_call` inputs are v0.3.
+A contract that declares one or more `inputs` rules asserts only `workflow_dispatch` runs. On any other event the command fails with an exit code of 2 rather than reporting a passing assertion. An empty `inputs: {}` section declares no rule and asserts nothing, the same as an empty `env: {}` section, so it does not restrict the event. `workflow_call` inputs are v0.3.
 
 When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
 
