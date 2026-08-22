@@ -20,10 +20,45 @@ jobs:
       contents: write # リリース用ブランチへの push とタグの作成に必要
       pull-requests: write # リリース PR の作成と更新に必要
       issues: read # チェンジログ生成のために issue を参照する
+    outputs:
+      tag: ${{ steps.tagpr.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       - uses: Songmu/tagpr@d1b8138b7a31075141b6cd64103de9485ced7ac9 # v1.20.1
+        id: tagpr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # GITHUB_TOKEN で作成したタグは push イベントを発火しないため、
+  # タグ push をトリガーにせずタグを作った実行の中でリリースを公開する。
+  release:
+    name: release
+    needs: tagpr
+    if: needs.tagpr.outputs.tag != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write # リリースアセットのアップロードに必要
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.tagpr.outputs.tag }}
+          persist-credentials: false
+      - uses: cli/gh-extension-precompile@76961aa3bd1123d0a6fd42d0a41aca0696937c39 # v2.2.0
+        with:
+          go_version_file: go.mod
+          go_build_options: ./cmd/gh-assert
+          release_tag: ${{ needs.tagpr.outputs.tag }}
+      - name: Build Action binary
+        run: |
+          mkdir -p dist/action
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o dist/action/gh-assert-linux-amd64 ./cmd/gh-assert
+          # 呼び出し側はバイナリと同じディレクトリで検証するため、パスを含めずファイル名だけで記録する
+          (cd dist/action && sha256sum gh-assert-linux-amd64 > gh-assert-linux-amd64.sha256)
+      - name: Upload Action binary
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.tagpr.outputs.tag }}
+        run: gh release upload "$TAG" dist/action/gh-assert-linux-amd64 dist/action/gh-assert-linux-amd64.sha256 --clobber

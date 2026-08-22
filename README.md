@@ -33,10 +33,10 @@ Supported constraints are `required`, string `enum` and `pattern`, integer `min`
 Place the Action in a workflow step and pass the environment values that the contract names:
 
 ```yaml
-- uses: rin2yh/gh-assert@v1
+- uses: rin2yh/gh-assert@v0.0.2
   with:
     contract: .github/workflows/deploy_assert.yml
-    version: v0.1.0
+    version: v0.0.2
   env:
     ENVIRONMENT: ${{ vars.DEPLOY_ENVIRONMENT }}
     RETRIES: ${{ vars.DEPLOY_RETRIES }}
