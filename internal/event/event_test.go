@@ -1,11 +1,10 @@
 package event
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/rin2yh/gh-assert/internal/testutil"
 )
 
 func TestName(t *testing.T) {
@@ -47,32 +46,37 @@ func TestInputsReadsEventPayload(t *testing.T) {
 	}
 }
 
-func TestInputsRejectsUnreadablePayload(t *testing.T) {
-	tests := []struct {
-		name string
-		path func(t *testing.T) string
-	}{
-		{name: "no event path", path: func(*testing.T) string { return "" }},
-		{name: "missing file", path: func(t *testing.T) string { return filepath.Join(t.TempDir(), "absent.json") }},
-		{name: "invalid json", path: func(t *testing.T) string { return writeEvent(t, "{") }},
-		{name: "non scalar input", path: func(t *testing.T) string { return writeEvent(t, `{"inputs":{"matrix":["a"]}}`) }},
+func TestInputsRejectsInvalidPayload(t *testing.T) {
+	tests := []struct{ name, payload string }{
+		{name: "invalid json", payload: "{"},
+		{name: "non scalar input", payload: `{"inputs":{"matrix":["a"]}}`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GITHUB_EVENT_PATH", tt.path(t))
+			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
 
-			if _, err := Inputs(); err == nil {
-				t.Fatal("expected an error")
-			}
+			_, err := Inputs()
+			testutil.AssertError(t, err)
+		})
+	}
+}
+
+func TestInputsRejectsUnavailablePayload(t *testing.T) {
+	tests := []struct{ name, path string }{
+		{name: "no event path", path: ""},
+		{name: "missing file", path: "testdata/absent.json"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("GITHUB_EVENT_PATH", tt.path)
+
+			_, err := Inputs()
+			testutil.AssertError(t, err)
 		})
 	}
 }
 
 func writeEvent(t *testing.T, payload string) string {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "event.json")
-	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testutil.WriteFile(t, t.TempDir(), "event.json", payload)
 }
