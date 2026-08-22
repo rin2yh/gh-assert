@@ -8,15 +8,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-func writeEvent(t *testing.T, payload string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "event.json")
-	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
-}
-
 func TestName(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_NAME", Dispatch)
 	if got := Name(); got != Dispatch {
@@ -25,47 +16,51 @@ func TestName(t *testing.T) {
 }
 
 func TestInputsReadsEventPayload(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, `{"inputs":{"environment":"staging","retries":3,"dry-run":true,"note":null}}`))
-
-	inputs, err := Inputs()
-	if err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name    string
+		payload string
+		want    map[string]string
+	}{
+		{
+			name:    "scalar values",
+			payload: `{"inputs":{"environment":"staging","retries":3,"dry-run":true,"note":null}}`,
+			want:    map[string]string{"environment": "staging", "retries": "3", "dry-run": "true", "note": ""},
+		},
+		{
+			name:    "no inputs key",
+			payload: `{"ref":"refs/heads/main"}`,
+			want:    map[string]string{},
+		},
 	}
-	want := map[string]string{"environment": "staging", "retries": "3", "dry-run": "true", "note": ""}
-	if diff := cmp.Diff(want, inputs); diff != "" {
-		t.Fatalf("inputs mismatch (-want +got):\n%s", diff)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
 
-func TestInputsWithoutInputsKey(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, `{"ref":"refs/heads/main"}`))
-
-	inputs, err := Inputs()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(inputs) != 0 {
-		t.Fatalf("got %d inputs, want 0", len(inputs))
+			inputs, err := Inputs()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := cmp.Diff(tt.want, inputs); diff != "" {
+				t.Fatalf("inputs mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
 func TestInputsRejectsUnreadablePayload(t *testing.T) {
 	tests := []struct {
-		name    string
-		payload string
-		noPath  bool
+		name string
+		path func(t *testing.T) string
 	}{
-		{name: "no event path", noPath: true},
-		{name: "invalid json", payload: "{"},
-		{name: "non scalar input", payload: `{"inputs":{"matrix":["a"]}}`},
+		{name: "no event path", path: func(*testing.T) string { return "" }},
+		{name: "missing file", path: func(t *testing.T) string { return filepath.Join(t.TempDir(), "absent.json") }},
+		{name: "invalid json", path: func(t *testing.T) string { return writeEvent(t, "{") }},
+		{name: "non scalar input", path: func(t *testing.T) string { return writeEvent(t, `{"inputs":{"matrix":["a"]}}`) }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.noPath {
-				t.Setenv("GITHUB_EVENT_PATH", "")
-			} else {
-				t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
-			}
+			t.Setenv("GITHUB_EVENT_PATH", tt.path(t))
+
 			if _, err := Inputs(); err == nil {
 				t.Fatal("expected an error")
 			}
@@ -73,10 +68,11 @@ func TestInputsRejectsUnreadablePayload(t *testing.T) {
 	}
 }
 
-func TestInputsRejectsMissingFile(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_PATH", filepath.Join(t.TempDir(), "absent.json"))
-
-	if _, err := Inputs(); err == nil {
-		t.Fatal("expected an error")
+func writeEvent(t *testing.T, payload string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "event.json")
+	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+		t.Fatal(err)
 	}
+	return path
 }

@@ -13,12 +13,7 @@ import (
 )
 
 func TestParseValidContract(t *testing.T) {
-	path := filepath.Join("testdata", "valid.yml")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c, err := parse(path, data)
+	c, err := parseFile(t, "valid")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,30 +22,16 @@ func TestParseValidContract(t *testing.T) {
 	assertGolden(t, "valid.golden", got)
 }
 
-func TestParseReportsSectionInTypeErrors(t *testing.T) {
-	path := filepath.Join("testdata", "inputs-missing-type.yml")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
+func TestParseReportsDiagnostics(t *testing.T) {
+	tests := []struct{ name, file string }{
+		{name: "integer range", file: "schema-error"},
+		{name: "missing type names its section", file: "inputs-missing-type"},
 	}
-	_, parseErr := parse(path, data)
-	if parseErr == nil {
-		t.Fatal("expected error")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assertGolden(t, tt.file+".golden", parseError(t, tt.file).Error())
+		})
 	}
-	assertGolden(t, "inputs-missing-type.golden", parseErr.Error())
-}
-
-func TestParseReportsSchemaErrors(t *testing.T) {
-	path := filepath.Join("testdata", "schema-error.yml")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, parseErr := parse(path, data)
-	if parseErr == nil {
-		t.Fatal("expected error")
-	}
-	assertGolden(t, "schema-error.golden", parseErr.Error())
 }
 
 func TestParseRejectsUnsupportedDefinitions(t *testing.T) {
@@ -69,16 +50,7 @@ func TestParseRejectsUnsupportedDefinitions(t *testing.T) {
 		{name: "inputs invalid pattern", file: "inputs-bad-pattern"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			path := filepath.Join("testdata", tt.file+".yml")
-			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := parse(path, data); err == nil {
-				t.Fatal("expected error")
-			}
-		})
+		t.Run(tt.name, func(t *testing.T) { parseError(t, tt.file) })
 	}
 }
 
@@ -104,23 +76,6 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 	}
 }
 
-func ruleNames(rules map[string]Rule) string {
-	return strings.Join(slices.Sorted(maps.Keys(rules)), ",")
-}
-
-func assertGolden(t *testing.T, filename, got string) {
-	t.Helper()
-	golden, err := os.ReadFile(filepath.Join("testdata", filename))
-	if err != nil {
-		t.Fatal(err)
-	}
-	gotText := strings.TrimSpace(got)
-	wantText := strings.TrimSpace(string(golden))
-	if diff := cmp.Diff(wantText, gotText); diff != "" {
-		t.Fatalf("golden mismatch (-want +got):\n%s", diff)
-	}
-}
-
 func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "deploy_assert.yml"), []byte("env: {}\n"), 0o600); err != nil {
@@ -141,5 +96,39 @@ func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 func TestLoadTargetsRejectsEmptyDirectory(t *testing.T) {
 	if _, err := LoadTargets(t.TempDir()); err == nil {
 		t.Fatal("expected an error")
+	}
+}
+
+func parseFile(t *testing.T, name string) (*Contract, error) {
+	t.Helper()
+	path := filepath.Join("testdata", name+".yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return parse(path, data)
+}
+
+func parseError(t *testing.T, name string) error {
+	t.Helper()
+	_, err := parseFile(t, name)
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	return err
+}
+
+func ruleNames(rules map[string]Rule) string {
+	return strings.Join(slices.Sorted(maps.Keys(rules)), ",")
+}
+
+func assertGolden(t *testing.T, filename, got string) {
+	t.Helper()
+	golden, err := os.ReadFile(filepath.Join("testdata", filename))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diff := cmp.Diff(strings.TrimSpace(string(golden)), strings.TrimSpace(got)); diff != "" {
+		t.Fatalf("golden mismatch (-want +got):\n%s", diff)
 	}
 }

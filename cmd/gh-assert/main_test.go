@@ -10,62 +10,41 @@ import (
 
 func TestValidateContract(t *testing.T) {
 	path := writeContract(t, "env: {}\n")
-	code, stdout, stderr := runCommand([]string{"validate", path})
+	stdout, _ := runCommand(t, []string{"validate", path}, 0)
 
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stdout, "contract is valid") {
-		t.Errorf("stdout = %q, want contract success message", stdout)
-	}
+	assertContains(t, stdout, "contract is valid")
 }
 
 func TestValidateReportsOutputError(t *testing.T) {
 	path := writeContract(t, "env: {}\n")
-	code := execute([]string{"validate", path}, errorWriter{}, &strings.Builder{})
+	var stderr strings.Builder
+	code := execute([]string{"validate", path}, errorWriter{}, &stderr)
 
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
-	}
+	assertExitCode(t, code, 2, stderr.String())
 }
 
 func TestValidateRejectsInvalidContract(t *testing.T) {
 	path := writeContract(t, "env: []\n")
-	code, _, stderr := runCommand([]string{"validate", path})
+	_, stderr := runCommand(t, []string{"validate", path}, 2)
 
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
-	}
-	if !strings.Contains(stderr, "cannot unmarshal") {
-		t.Errorf("stderr = %q, want YAML error", stderr)
-	}
+	assertContains(t, stderr, "cannot unmarshal")
 }
 
 func TestRuntimeSuccess(t *testing.T) {
 	t.Setenv("FLAG", "true")
 	path := writeContract(t, "env:\n  FLAG:\n    required: true\n    type:\n      boolean: {}\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
 
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
-	}
+	runCommand(t, []string{"--contract", path}, 0)
 }
 
 func TestRuntimeFailureHidesValue(t *testing.T) {
 	const secret = "secret-value"
 	t.Setenv("TOKEN", secret)
 	path := writeContract(t, "env:\n  TOKEN:\n    required: true\n    type:\n      string:\n        enum: [expected]\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
+	_, stderr := runCommand(t, []string{"--contract", path}, 1)
 
-	if code != 1 {
-		t.Fatalf("exit code = %d, want 1", code)
-	}
-	if !strings.Contains(stderr, "allowed enum") {
-		t.Errorf("stderr = %q, want enum violation", stderr)
-	}
-	if strings.Contains(stderr, secret) {
-		t.Errorf("stderr contains hidden value %q", secret)
-	}
+	assertContains(t, stderr, "allowed enum")
+	assertNotContains(t, stderr, secret)
 }
 
 func TestRuntimeReportsDiagnosticOutputError(t *testing.T) {
@@ -73,115 +52,112 @@ func TestRuntimeReportsDiagnosticOutputError(t *testing.T) {
 	path := writeContract(t, "env:\n  TOKEN:\n    required: true\n    type:\n      string:\n        enum: [expected]\n")
 	code := execute([]string{"--contract", path}, &strings.Builder{}, errorWriter{})
 
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
-	}
+	assertExitCode(t, code, 2, "")
 }
 
 func TestRuntimeAssertsWorkflowDispatchInputs(t *testing.T) {
 	setEvent(t, `{"inputs":{"environment":"develop"}}`)
 	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
+	_, stderr := runCommand(t, []string{"--contract", path}, 1)
 
-	if code != 1 {
-		t.Fatalf("exit code = %d, want 1; stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stderr, "input environment") {
-		t.Errorf("stderr = %q, want an input violation", stderr)
-	}
-	if strings.Contains(stderr, "develop") {
-		t.Errorf("stderr contains the input value: %q", stderr)
-	}
+	assertContains(t, stderr, "input environment")
+	assertNotContains(t, stderr, "develop")
 }
 
 func TestRuntimeSucceedsWithValidInputs(t *testing.T) {
 	setEvent(t, `{"inputs":{"environment":"staging","retries":3}}`)
 	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n  retries:\n    type:\n      integer:\n        min: 0\n        max: 5\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
 
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
+	runCommand(t, []string{"--contract", path}, 0)
+}
+
+func TestRuntimeRejectsInputsContractOutsideWorkflowDispatch(t *testing.T) {
+	tests := []struct {
+		name      string
+		eventName string
+	}{
+		{name: "other event", eventName: "push"},
+		{name: "no event name", eventName: ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("GITHUB_EVENT_NAME", tt.eventName)
+			t.Setenv("GITHUB_EVENT_PATH", "")
+			path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string: {}\n")
+			_, stderr := runCommand(t, []string{"--contract", path}, 2)
+
+			assertContains(t, stderr, "workflow_dispatch")
+		})
 	}
 }
 
-func TestRuntimeRejectsInputsOutsideWorkflowDispatch(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "push")
-	t.Setenv("GITHUB_EVENT_PATH", "")
-	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string: {}\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
-
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
+func TestRuntimeIgnoresEventWithoutInputRules(t *testing.T) {
+	tests := []struct{ name, contract string }{
+		{name: "empty inputs section", contract: "inputs: {}\n"},
+		{name: "env only", contract: "env:\n  FLAG:\n    required: true\n    type:\n      boolean: {}\n"},
 	}
-	if !strings.Contains(stderr, "workflow_dispatch") {
-		t.Errorf("stderr = %q, want a workflow_dispatch requirement error", stderr)
-	}
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("GITHUB_EVENT_NAME", "push")
+			t.Setenv("GITHUB_EVENT_PATH", "")
+			t.Setenv("FLAG", "true")
 
-func TestRuntimeAllowsEmptyInputsSectionOutsideWorkflowDispatch(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "push")
-	t.Setenv("GITHUB_EVENT_PATH", "")
-	path := writeContract(t, "inputs: {}\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
-
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
-	}
-}
-
-func TestRuntimeIgnoresEventWithoutInputsContract(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "push")
-	t.Setenv("FLAG", "true")
-	path := writeContract(t, "env:\n  FLAG:\n    required: true\n    type:\n      boolean: {}\n")
-	code, _, stderr := runCommand([]string{"--contract", path})
-
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
+			runCommand(t, []string{"--contract", writeContract(t, tt.contract)}, 0)
+		})
 	}
 }
 
 func TestValidateAcceptsInputsContract(t *testing.T) {
 	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n")
-	code, stdout, stderr := runCommand([]string{"validate", path})
+	stdout, _ := runCommand(t, []string{"validate", path}, 0)
 
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stdout, "contract is valid") {
-		t.Errorf("stdout = %q, want contract success message", stdout)
-	}
+	assertContains(t, stdout, "contract is valid")
 }
 
 func TestHelp(t *testing.T) {
-	code, stdout, stderr := runCommand([]string{"help"})
+	stdout, _ := runCommand(t, []string{"help"}, 0)
 
-	if code != 0 {
-		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
-	}
-	if !strings.Contains(stdout, "validate") {
-		t.Errorf("stdout = %q, want validate command", stdout)
-	}
+	assertContains(t, stdout, "validate")
 }
 
 func TestRejectsUnknownCommand(t *testing.T) {
-	code, _, stderr := runCommand([]string{"unknown"})
+	_, stderr := runCommand(t, []string{"unknown"}, 2)
 
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
-	}
-	if !strings.Contains(stderr, "unknown") {
-		t.Errorf("stderr = %q, want unknown command error", stderr)
-	}
+	assertContains(t, stderr, "unknown")
 }
 
 func TestValidateRejectsExtraArgument(t *testing.T) {
-	code, _, stderr := runCommand([]string{"validate", "one.yml", "two.yml"})
+	_, stderr := runCommand(t, []string{"validate", "one.yml", "two.yml"}, 2)
 
-	if code != 2 {
-		t.Fatalf("exit code = %d, want 2", code)
+	assertContains(t, stderr, "at most 1 arg")
+}
+
+func runCommand(t *testing.T, args []string, wantCode int) (string, string) {
+	t.Helper()
+	var stdout, stderr strings.Builder
+	code := execute(args, &stdout, &stderr)
+	assertExitCode(t, code, wantCode, stderr.String())
+	return stdout.String(), stderr.String()
+}
+
+func assertExitCode(t *testing.T, got, want int, stderr string) {
+	t.Helper()
+	if got != want {
+		t.Fatalf("exit code = %d, want %d; stderr=%q", got, want, stderr)
 	}
-	if !strings.Contains(stderr, "at most 1 arg") {
-		t.Errorf("stderr = %q, want argument count error", stderr)
+}
+
+func assertContains(t *testing.T, got, want string) {
+	t.Helper()
+	if !strings.Contains(got, want) {
+		t.Errorf("output = %q, want it to contain %q", got, want)
+	}
+}
+
+func assertNotContains(t *testing.T, got, unwanted string) {
+	t.Helper()
+	if strings.Contains(got, unwanted) {
+		t.Errorf("output = %q, want it to omit %q", got, unwanted)
 	}
 }
 
@@ -203,12 +179,6 @@ func writeFile(t *testing.T, name, content string) string {
 		t.Fatal(err)
 	}
 	return path
-}
-
-func runCommand(args []string) (int, string, string) {
-	var stdout, stderr strings.Builder
-	code := execute(args, &stdout, &stderr)
-	return code, stdout.String(), stderr.String()
 }
 
 type errorWriter struct{}
