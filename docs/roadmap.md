@@ -19,10 +19,11 @@
 * GitHub Actionとして実行可能にする
 * `*_assert.yml` をvalidateとruntime assertionで共有する
 
+v0.1ではenvだけをcontractの対象とする。inputs、job/step env、Reusable Workflow、Composite Action contractは後続versionで扱う。
+
 `validate` はcontract定義のみを検証する。
 
 * YAML syntax
-* version
 * unknown fields
 * type definition
 * invalid regex

@@ -36,13 +36,16 @@ Place the Action in a workflow step and pass the environment values that the con
 - uses: rin2yh/gh-assert@v1
   with:
     contract: .github/workflows/deploy_assert.yml
+    version: v0.1.0
   env:
     ENVIRONMENT: ${{ vars.DEPLOY_ENVIRONMENT }}
     RETRIES: ${{ vars.DEPLOY_RETRIES }}
     DRY_RUN: ${{ vars.DRY_RUN }}
 ```
 
-The Action installs the matching release binary through GitHub CLI, then runs it. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
+The Action targets `ubuntu-latest` in v0.1. It downloads the Linux amd64 release binary and verifies its checksum before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
+
+When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
 
 ## Validate a contract
 
@@ -52,13 +55,26 @@ Install the extension:
 gh extension install rin2yh/gh-assert
 ```
 
-Validate a contract definition:
+Validate all contracts under `.github`:
+
+```bash
+gh assert validate
+```
+
+To validate one contract, pass its path as a positional argument.
 
 ```bash
 gh assert validate .github/workflows/deploy_assert.yml
 ```
 
 The same command is available as `gh-assert validate ...` after building locally. Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. It does not execute a workflow.
+
+Runtime assertion follows the same path rule:
+
+```bash
+gh assert
+gh assert .github/workflows/deploy_assert.yml
+```
 
 ## Development
 
