@@ -5,14 +5,21 @@ on:
     branches:
       - main
 
-permissions:
-  contents: write
-  pull-requests: write
-  issues: read
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   tagpr:
+    name: tagpr
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # リリース用ブランチへの push とタグの作成に必要
+      pull-requests: write # リリース PR の作成と更新に必要
+      issues: read # チェンジログ生成のために issue を参照する
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
