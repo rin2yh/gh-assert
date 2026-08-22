@@ -1,8 +1,8 @@
 name: gh-assert
-description: Assert GitHub Actions environment variables from a contract.
+description: Assert GitHub Actions environment variables and workflow inputs from a contract.
 inputs:
   contract:
-    description: Path to the env contract file.
+    description: Path to the contract file.
     required: false
   version:
     description: Release tag to download, or latest.

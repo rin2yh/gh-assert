@@ -22,13 +22,30 @@ func TestParseValidContract(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	names := make([]string, 0, len(c.Env))
-	for name := range c.Env {
-		names = append(names, name)
+	var lines []string
+	for _, section := range sections {
+		rules := c.Rules(section)
+		names := make([]string, 0, len(rules))
+		for name := range rules {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		lines = append(lines, fmt.Sprintf("%s: %s", section, strings.Join(names, ",")))
 	}
-	sort.Strings(names)
-	got := fmt.Sprintf("env: %s", strings.Join(names, ","))
-	assertGolden(t, "valid.golden", got)
+	assertGolden(t, "valid.golden", strings.Join(lines, "\n"))
+}
+
+func TestParseReportsSectionInTypeErrors(t *testing.T) {
+	path := filepath.Join("testdata", "inputs-missing-type.yml")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, parseErr := parse(path, data)
+	if parseErr == nil {
+		t.Fatal("expected error")
+	}
+	assertGolden(t, "inputs-missing-type.golden", parseErr.Error())
 }
 
 func TestParseReportsSchemaErrors(t *testing.T) {
@@ -55,6 +72,9 @@ func TestParseRejectsUnsupportedDefinitions(t *testing.T) {
 		{name: "invalid pattern", file: "bad-pattern"},
 		{name: "unsupported default", file: "unsupported-default"},
 		{name: "unsupported integer enum", file: "unsupported-integer-enum"},
+		{name: "no sections", file: "no-sections"},
+		{name: "inputs missing type", file: "inputs-missing-type"},
+		{name: "inputs invalid pattern", file: "inputs-bad-pattern"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -65,6 +85,28 @@ func TestParseRejectsUnsupportedDefinitions(t *testing.T) {
 			}
 			if _, err := parse(path, data); err == nil {
 				t.Fatal("expected error")
+			}
+		})
+	}
+}
+
+func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
+	tests := []struct {
+		name    string
+		content string
+		section string
+	}{
+		{name: "env only", content: "env: {}\n", section: SectionEnv},
+		{name: "inputs only", content: "inputs: {}\n", section: SectionInputs},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := parse("contract.yml", []byte(tt.content))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if c.Rules(tt.section) == nil {
+				t.Fatalf("%s section was not parsed", tt.section)
 			}
 		})
 	}

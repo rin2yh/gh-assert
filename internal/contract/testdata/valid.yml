@@ -14,3 +14,17 @@ env:
   DRY_RUN:
     type:
       boolean: {}
+inputs:
+  environment:
+    required: true
+    type:
+      string:
+        enum: [staging, production]
+  retries:
+    type:
+      integer:
+        min: 0
+        max: 5
+  dry-run:
+    type:
+      boolean: {}

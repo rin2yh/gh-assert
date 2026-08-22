@@ -12,6 +12,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const (
+	SectionEnv    = "env"
+	SectionInputs = "inputs"
+)
+
+var sections = []string{SectionEnv, SectionInputs}
+
 type Position struct {
 	Path   string
 	Line   int
@@ -19,7 +26,8 @@ type Position struct {
 }
 
 type Contract struct {
-	Env map[string]Rule `yaml:"env"`
+	Env    map[string]Rule `yaml:"env"`
+	Inputs map[string]Rule `yaml:"inputs"`
 }
 
 type Rule struct {
@@ -49,6 +57,16 @@ type IntegerType struct {
 type Loaded struct {
 	Path     string
 	Contract *Contract
+}
+
+func (c *Contract) Rules(section string) map[string]Rule {
+	switch section {
+	case SectionEnv:
+		return c.Env
+	case SectionInputs:
+		return c.Inputs
+	}
+	return nil
 }
 
 func LoadFile(path string) (*Contract, error) {
@@ -108,22 +126,41 @@ func parse(path string, data []byte) (*Contract, error) {
 	if err := decoder.Decode(&c); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	if c.Env == nil {
-		return nil, fmt.Errorf("%s: env is required", path)
+	if c.Env == nil && c.Inputs == nil {
+		return nil, fmt.Errorf("%s: env or inputs is required", path)
 	}
 
 	positions := readPositions(path, data)
-	for name, rule := range c.Env {
-		rule.Position = positions.rules[name]
-		if err := prepareRule(name, &rule, positions.types[name]); err != nil {
+	for _, section := range sections {
+		if err := prepareSection(section, c.Rules(section), positions[section]); err != nil {
 			return nil, err
 		}
-		c.Env[name] = rule
 	}
 	return &c, nil
 }
 
-func prepareRule(name string, rule *Rule, typePosition Position) error {
+func prepareSection(section string, rules map[string]Rule, positions sectionPositions) error {
+	names := make([]string, 0, len(rules))
+	for name := range rules {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		rule := rules[name]
+		rule.Position = positions.rules[name]
+		typePosition := positions.types[name]
+		if typePosition.Path == "" {
+			typePosition = rule.Position
+		}
+		if err := prepareRule(section, name, &rule, typePosition); err != nil {
+			return err
+		}
+		rules[name] = rule
+	}
+	return nil
+}
+
+func prepareRule(section, name string, rule *Rule, typePosition Position) error {
 	types := 0
 	if rule.Type.String != nil {
 		types++
@@ -149,33 +186,39 @@ func prepareRule(name string, rule *Rule, typePosition Position) error {
 		rule.Type.Kind = "boolean"
 	}
 	if types != 1 {
-		return fmt.Errorf("%s:%d:%d: env.%s.type must specify exactly one type", typePosition.Path, typePosition.Line, typePosition.Column, name)
+		return fmt.Errorf("%s:%d:%d: %s.%s.type must specify exactly one type", typePosition.Path, typePosition.Line, typePosition.Column, section, name)
 	}
 	return nil
 }
 
-type positionIndex struct {
+type sectionPositions struct {
 	rules map[string]Position
 	types map[string]Position
 }
 
-func readPositions(path string, data []byte) positionIndex {
-	index := positionIndex{rules: map[string]Position{}, types: map[string]Position{}}
+func readPositions(path string, data []byte) map[string]sectionPositions {
+	index := map[string]sectionPositions{}
+	for _, section := range sections {
+		index[section] = sectionPositions{rules: map[string]Position{}, types: map[string]Position{}}
+	}
 	var doc yaml.Node
 	if yaml.Unmarshal(data, &doc) != nil || len(doc.Content) == 0 {
 		return index
 	}
-	env := mappingValue(doc.Content[0], "env")
-	if env == nil {
-		return index
-	}
-	for i := 0; i+1 < len(env.Content); i += 2 {
-		name, rule := env.Content[i].Value, env.Content[i+1]
-		index.rules[name] = Position{Path: path, Line: rule.Line, Column: rule.Column}
-		typeNode := mappingValue(rule, "type")
-		if typeNode != nil && len(typeNode.Content) >= 2 {
-			spec := typeNode.Content[1]
-			index.types[name] = Position{Path: path, Line: spec.Line, Column: spec.Column}
+	for _, section := range sections {
+		node := mappingValue(doc.Content[0], section)
+		if node == nil {
+			continue
+		}
+		positions := index[section]
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			name, rule := node.Content[i].Value, node.Content[i+1]
+			positions.rules[name] = Position{Path: path, Line: rule.Line, Column: rule.Column}
+			typeNode := mappingValue(rule, "type")
+			if typeNode != nil && len(typeNode.Content) >= 2 {
+				spec := typeNode.Content[1]
+				positions.types[name] = Position{Path: path, Line: spec.Line, Column: spec.Column}
+			}
 		}
 	}
 	return index

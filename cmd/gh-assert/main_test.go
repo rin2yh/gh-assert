@@ -78,6 +78,69 @@ func TestRuntimeReportsDiagnosticOutputError(t *testing.T) {
 	}
 }
 
+func TestRuntimeAssertsWorkflowDispatchInputs(t *testing.T) {
+	setEvent(t, `{"inputs":{"environment":"develop"}}`)
+	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n")
+	code, _, stderr := runCommand([]string{"--contract", path})
+
+	if code != 1 {
+		t.Fatalf("exit code = %d, want 1; stderr=%q", code, stderr)
+	}
+	if !strings.Contains(stderr, "input environment") {
+		t.Errorf("stderr = %q, want an input violation", stderr)
+	}
+	if strings.Contains(stderr, "develop") {
+		t.Errorf("stderr contains the input value: %q", stderr)
+	}
+}
+
+func TestRuntimeSucceedsWithValidInputs(t *testing.T) {
+	setEvent(t, `{"inputs":{"environment":"staging","retries":3}}`)
+	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n  retries:\n    type:\n      integer:\n        min: 0\n        max: 5\n")
+	code, _, stderr := runCommand([]string{"--contract", path})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
+	}
+}
+
+func TestRuntimeRejectsInputsOutsideWorkflowDispatch(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "push")
+	t.Setenv("GITHUB_EVENT_PATH", "")
+	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string: {}\n")
+	code, _, stderr := runCommand([]string{"--contract", path})
+
+	if code != 2 {
+		t.Fatalf("exit code = %d, want 2", code)
+	}
+	if !strings.Contains(stderr, "workflow_dispatch") {
+		t.Errorf("stderr = %q, want a workflow_dispatch requirement error", stderr)
+	}
+}
+
+func TestRuntimeIgnoresEventWithoutInputsContract(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "push")
+	t.Setenv("FLAG", "true")
+	path := writeContract(t, "env:\n  FLAG:\n    required: true\n    type:\n      boolean: {}\n")
+	code, _, stderr := runCommand([]string{"--contract", path})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
+	}
+}
+
+func TestValidateAcceptsInputsContract(t *testing.T) {
+	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n")
+	code, stdout, stderr := runCommand([]string{"validate", path})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr)
+	}
+	if !strings.Contains(stdout, "contract is valid") {
+		t.Errorf("stdout = %q, want contract success message", stdout)
+	}
+}
+
 func TestHelp(t *testing.T) {
 	code, stdout, stderr := runCommand([]string{"help"})
 
@@ -109,6 +172,16 @@ func TestValidateRejectsExtraArgument(t *testing.T) {
 	if !strings.Contains(stderr, "at most 1 arg") {
 		t.Errorf("stderr = %q, want argument count error", stderr)
 	}
+}
+
+func setEvent(t *testing.T, payload string) {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "event.json")
+	if err := os.WriteFile(path, []byte(payload), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
+	t.Setenv("GITHUB_EVENT_PATH", path)
 }
 
 func writeContract(t *testing.T, content string) string {

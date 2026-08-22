@@ -1,0 +1,1 @@
+testdata/inputs-missing-type.yml:3:5: inputs.environment.type must specify exactly one type

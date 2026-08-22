@@ -2,7 +2,7 @@
 
 Declarative environment assertions for GitHub Actions.
 
-`gh-assert` moves common shell checks into a small YAML contract. Version 0.1 validates environment variables at runtime inside a GitHub Action and validates the contract definition from the command line.
+`gh-assert` moves common shell checks into a small YAML contract. Version 0.2 validates environment variables and `workflow_dispatch` inputs at runtime inside a GitHub Action, and validates the contract definition from the command line.
 
 ## Contract
 
@@ -24,9 +24,20 @@ env:
   DRY_RUN:
     type:
       boolean: {}
+inputs:
+  environment:
+    required: true
+    type:
+      string:
+        enum: [staging, production]
+  retries:
+    type:
+      integer:
+        min: 0
+        max: 5
 ```
 
-Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Inputs, defaults, expressions, conditional rules, and step or job contracts are outside v0.1.
+A contract declares `env`, `inputs`, or both. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside v0.2. Reusable Workflow and Composite Action contracts are outside v0.2.
 
 ## Runtime assertion
 
@@ -36,14 +47,29 @@ Place the Action in a workflow step and pass the environment values that the con
 - uses: rin2yh/gh-assert@v1
   with:
     contract: .github/workflows/deploy_assert.yml
-    version: v0.1.0
+    version: v0.2.0
   env:
     ENVIRONMENT: ${{ vars.DEPLOY_ENVIRONMENT }}
     RETRIES: ${{ vars.DEPLOY_RETRIES }}
     DRY_RUN: ${{ vars.DRY_RUN }}
 ```
 
-The Action targets `ubuntu-latest` in v0.1. It downloads the Linux amd64 release binary and verifies its checksum before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
+Inputs need no wiring. `gh-assert` reads them from the event payload of the running workflow, so the contract is the only place that names them:
+
+```yaml
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: choice
+        options: [staging, production]
+      retries:
+        type: number
+```
+
+The Action targets `ubuntu-latest` in v0.2. It downloads the Linux amd64 release binary and verifies its checksum before execution. It exits non-zero when a required variable or input is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
+
+A contract that declares `inputs` asserts only `workflow_dispatch` runs. On any other event the command fails with an exit code of 2 rather than reporting a passing assertion. `workflow_call` inputs are v0.3.
 
 When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
 
