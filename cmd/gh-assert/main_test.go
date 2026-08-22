@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rin2yh/gh-assert/internal/testutil"
+	"github.com/rin2yh/gh-assert/internal/test"
 )
 
 func TestValidateContract(t *testing.T) {
@@ -164,12 +164,12 @@ func assertNotContains(t *testing.T, got, unwanted string) {
 func setEvent(t *testing.T, payload string) {
 	t.Helper()
 	t.Setenv("GITHUB_EVENT_NAME", "workflow_dispatch")
-	t.Setenv("GITHUB_EVENT_PATH", testutil.WriteFile(t, t.TempDir(), "event.json", payload))
+	t.Setenv("GITHUB_EVENT_PATH", test.WriteFile(t, t.TempDir(), "event.json", payload))
 }
 
 func writeContract(t *testing.T, content string) string {
 	t.Helper()
-	return testutil.WriteFile(t, t.TempDir(), "contract.yml", content)
+	return test.WriteFile(t, t.TempDir(), "contract.yml", content)
 }
 
 type errorWriter struct{}

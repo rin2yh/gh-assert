@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/rin2yh/gh-assert/internal/testutil"
+	"github.com/rin2yh/gh-assert/internal/test"
 )
 
 func TestParseValidContract(t *testing.T) {
@@ -79,8 +79,8 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 
 func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 	dir := t.TempDir()
-	testutil.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
-	testutil.WriteFile(t, dir, "deploy.yml", "on: push\n")
+	test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
+	test.WriteFile(t, dir, "deploy.yml", "on: push\n")
 	loaded, err := LoadTargets(dir)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 
 func TestLoadTargetsRejectsEmptyDirectory(t *testing.T) {
 	_, err := LoadTargets(t.TempDir())
-	testutil.AssertError(t, err)
+	test.AssertError(t, err)
 }
 
 func parseFile(t *testing.T, name string) (*Contract, error) {
@@ -108,7 +108,7 @@ func parseFile(t *testing.T, name string) (*Contract, error) {
 func assertParseFails(t *testing.T, name string) string {
 	t.Helper()
 	_, err := parseFile(t, name)
-	testutil.AssertError(t, err)
+	test.AssertError(t, err)
 	return err.Error()
 }
 

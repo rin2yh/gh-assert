@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/rin2yh/gh-assert/internal/testutil"
+	"github.com/rin2yh/gh-assert/internal/test"
 )
 
 func TestName(t *testing.T) {
@@ -56,7 +56,7 @@ func TestInputsRejectsInvalidPayload(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
 
 			_, err := Inputs()
-			testutil.AssertError(t, err)
+			test.AssertError(t, err)
 		})
 	}
 }
@@ -71,12 +71,12 @@ func TestInputsRejectsUnavailablePayload(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", tt.path)
 
 			_, err := Inputs()
-			testutil.AssertError(t, err)
+			test.AssertError(t, err)
 		})
 	}
 }
 
 func writeEvent(t *testing.T, payload string) string {
 	t.Helper()
-	return testutil.WriteFile(t, t.TempDir(), "event.json", payload)
+	return test.WriteFile(t, t.TempDir(), "event.json", payload)
 }
