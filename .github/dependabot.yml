@@ -5,7 +5,10 @@ updates:
     schedule:
       interval: monthly
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore(deps/actions)"
+    labels:
+      - dependencies
+      - github-actions
     groups:
       github-actions:
         patterns:
@@ -16,7 +19,10 @@ updates:
     schedule:
       interval: monthly
     commit-message:
-      prefix: "chore(deps)"
+      prefix: "chore(deps/go)"
+    labels:
+      - dependencies
+      - go
     groups:
       go-modules:
         patterns:
