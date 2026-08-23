@@ -1,7 +1,6 @@
 package workflow
 
 import (
-	"bytes"
 	"fmt"
 	"maps"
 	"os"
@@ -18,22 +17,27 @@ type input struct {
 	Type     string `yaml:"type"`
 }
 
+type definition struct {
+	On struct {
+		WorkflowCall *struct {
+			Inputs map[string]input `yaml:"inputs"`
+		} `yaml:"workflow_call"`
+	} `yaml:"on"`
+}
+
 // ValidateReusableInterface validates a contract against its sibling reusable
 // workflow. The returned boolean reports whether the target is reusable.
 func ValidateReusableInterface(item contract.Loaded) (bool, error) {
-	workflowPath, ok := workflowPath(item.Path)
+	path, ok := workflowPath(item.Path)
 	if !ok {
 		return false, nil
 	}
 
-	inputs, reusable, err := loadReusableInputs(workflowPath)
+	inputs, reusable, err := loadReusableInputs(path)
 	if err != nil || !reusable {
 		return reusable, err
 	}
-	if err := compareInputs(workflowPath, inputs, item.Contract.Inputs); err != nil {
-		return true, err
-	}
-	return true, nil
+	return true, compareInputs(path, inputs, item.Contract.Inputs)
 }
 
 func workflowPath(contractPath string) (string, bool) {
@@ -50,61 +54,14 @@ func loadReusableInputs(path string) (map[string]input, bool, error) {
 		return nil, false, err
 	}
 
-	var document yaml.Node
-	if err := yaml.NewDecoder(bytes.NewReader(data)).Decode(&document); err != nil {
+	var workflow definition
+	if err := yaml.Unmarshal(data, &workflow); err != nil {
 		return nil, false, fmt.Errorf("%s: %w", path, err)
 	}
-	if len(document.Content) == 0 {
+	if workflow.On.WorkflowCall == nil {
 		return nil, false, nil
 	}
-
-	on := mappingValue(document.Content[0], "on")
-	call, reusable := eventNode(on, "workflow_call")
-	if !reusable {
-		return nil, false, nil
-	}
-	inputsNode := mappingValue(call, "inputs")
-	if inputsNode == nil {
-		return map[string]input{}, true, nil
-	}
-
-	var inputs map[string]input
-	if err := inputsNode.Decode(&inputs); err != nil {
-		return nil, true, fmt.Errorf("%s:%d:%d: workflow_call.inputs: %w", path, inputsNode.Line, inputsNode.Column, err)
-	}
-	return inputs, true, nil
-}
-
-func eventNode(on *yaml.Node, name string) (*yaml.Node, bool) {
-	if on == nil {
-		return nil, false
-	}
-	switch on.Kind {
-	case yaml.MappingNode:
-		value := mappingValue(on, name)
-		return value, value != nil
-	case yaml.ScalarNode:
-		return on, on.Value == name
-	case yaml.SequenceNode:
-		for _, event := range on.Content {
-			if event.Value == name {
-				return event, true
-			}
-		}
-	}
-	return nil, false
-}
-
-func mappingValue(node *yaml.Node, key string) *yaml.Node {
-	if node == nil || node.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		if node.Content[i].Value == key {
-			return node.Content[i+1]
-		}
-	}
-	return nil
+	return workflow.On.WorkflowCall.Inputs, true, nil
 }
 
 func compareInputs(path string, workflowInputs map[string]input, contractInputs map[string]contract.Rule) error {
@@ -128,10 +85,10 @@ func compareInputs(path string, workflowInputs map[string]input, contractInputs 
 			problems = append(problems, fmt.Sprintf("contract input %s is not declared by workflow_call", name))
 		}
 	}
-	if len(problems) > 0 {
-		return fmt.Errorf("%s: reusable workflow interface does not match contract: %s", filepath.Clean(path), strings.Join(problems, "; "))
+	if len(problems) == 0 {
+		return nil
 	}
-	return nil
+	return fmt.Errorf("%s: reusable workflow interface does not match contract: %s", filepath.Clean(path), strings.Join(problems, "; "))
 }
 
 func workflowType(contractType string) string {

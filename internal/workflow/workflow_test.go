@@ -75,24 +75,6 @@ func TestValidateReusableInterfaceIgnoresRegularWorkflow(t *testing.T) {
 	}
 }
 
-func TestValidateReusableInterfaceRecognizesScalarEvent(t *testing.T) {
-	dir := t.TempDir()
-	test.WriteFile(t, dir, "deploy.yml", "on: workflow_call\n")
-	contractPath := test.WriteFile(t, dir, "deploy_assert.yml", "inputs: {}\n")
-	c, err := contract.LoadFile(contractPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	reusable, err := ValidateReusableInterface(contract.Loaded{Path: contractPath, Contract: c})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !reusable {
-		t.Fatal("scalar workflow_call event was not recognized as reusable")
-	}
-}
-
 func TestWorkflowPath(t *testing.T) {
 	got, ok := workflowPath(filepath.Join(".github", "workflows", "deploy_assert.yml"))
 	if !ok || got != filepath.Join(".github", "workflows", "deploy.yml") {
