@@ -72,11 +72,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: rin2yh/gh-assert@v0.0.4
         with:
           contract: .github/workflows/deploy_assert.yml
           version: v0.0.4
           workflow-inputs: ${{ toJSON(inputs) }}
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
 ```
 
 For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, the Action asserts the explicitly forwarded input values and the declared environment variables.

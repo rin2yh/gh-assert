@@ -4,3 +4,4 @@ on:
       environment:
         required: true
         type: string
+  workflow_dispatch:

@@ -1,4 +1,4 @@
-package workflow
+package reusable
 
 import (
 	"path/filepath"
@@ -11,19 +11,15 @@ import (
 
 func TestValidateReusableInterface(t *testing.T) {
 	dir := t.TempDir()
-	workflowPath := test.WriteFile(t, dir, "deploy.yml", "on:\n  workflow_call:\n    inputs:\n      environment:\n        required: true\n        type: string\n      retries:\n        type: number\n")
+	test.WriteFile(t, dir, "deploy.yml", "on:\n  workflow_call:\n    inputs:\n      environment:\n        required: true\n        type: string\n      retries:\n        type: number\n")
 	contractPath := test.WriteFile(t, dir, "deploy_assert.yml", "inputs:\n  environment:\n    required: true\n    type:\n      string: {}\n  retries:\n    type:\n      integer: {}\n")
 	c, err := contract.LoadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	reusable, err := ValidateReusableInterface(contract.Loaded{Path: contractPath, Contract: c})
-	if err != nil {
+	if err := Validate(contract.Loaded{Path: contractPath, Contract: c}); err != nil {
 		t.Fatal(err)
-	}
-	if !reusable {
-		t.Fatalf("%s was not recognized as reusable", workflowPath)
 	}
 }
 
@@ -49,7 +45,7 @@ func TestValidateReusableInterfaceRejectsMismatch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			_, err = ValidateReusableInterface(contract.Loaded{Path: contractPath, Contract: c})
+			err = Validate(contract.Loaded{Path: contractPath, Contract: c})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("error = %v, want containing %q", err, tt.want)
 			}
@@ -66,12 +62,21 @@ func TestValidateReusableInterfaceIgnoresRegularWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	reusable, err := ValidateReusableInterface(contract.Loaded{Path: contractPath, Contract: c})
+	if err := Validate(contract.Loaded{Path: contractPath, Contract: c}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateReusableInterfaceAllowsMissingWorkflow(t *testing.T) {
+	dir := t.TempDir()
+	contractPath := test.WriteFile(t, dir, "deploy_assert.yml", "inputs: {}\n")
+	c, err := contract.LoadFile(contractPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reusable {
-		t.Fatal("regular workflow was recognized as reusable")
+
+	if err := Validate(contract.Loaded{Path: contractPath, Contract: c}); err != nil {
+		t.Fatal(err)
 	}
 }
 

@@ -9,8 +9,7 @@ import (
 	"github.com/rin2yh/gh-assert/internal/assertion"
 	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/diagnostic"
-	"github.com/rin2yh/gh-assert/internal/event"
-	"github.com/rin2yh/gh-assert/internal/workflow"
+	"github.com/rin2yh/gh-assert/internal/reusable"
 	"github.com/spf13/cobra"
 )
 
@@ -95,7 +94,7 @@ func newValidateCommand(stdout io.Writer) *cobra.Command {
 				return &commandError{code: 2, err: err}
 			}
 			for _, item := range loaded {
-				if _, err := workflow.ValidateReusableInterface(item); err != nil {
+				if err := reusable.Validate(item); err != nil {
 					return &commandError{code: 2, err: err}
 				}
 				if _, err := fmt.Fprintf(stdout, "%s: contract is valid\n", item.Path); err != nil {
@@ -123,11 +122,10 @@ func runRuntime(cmd *cobra.Command, args []string) error {
 	}
 	failed := false
 	for _, item := range loaded {
-		reusable, err := workflow.ValidateReusableInterface(item)
-		if err != nil {
+		if err := reusable.Validate(item); err != nil {
 			return &commandError{code: 2, err: err}
 		}
-		inputs, err := runtimeInputs(item, reusable)
+		inputs, err := reusable.RuntimeInputs(item)
 		if err != nil {
 			return &commandError{code: 2, err: err}
 		}
@@ -143,31 +141,4 @@ func runRuntime(cmd *cobra.Command, args []string) error {
 		return &commandError{code: 1, err: errors.New("contract assertion failed")}
 	}
 	return nil
-}
-
-func runtimeInputs(item contract.Loaded, reusable bool) (map[string]string, error) {
-	if len(item.Contract.Inputs) == 0 {
-		return nil, nil
-	}
-	if reusable {
-		if os.Getenv(event.InputsJSON) == "" {
-			return nil, fmt.Errorf("%s: reusable workflow inputs must be passed with workflow-inputs: ${{ toJSON(inputs) }}", item.Path)
-		}
-		inputs, err := event.WorkflowInputs()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", item.Path, err)
-		}
-		return inputs, nil
-	}
-	switch name := event.Name(); {
-	case name == "":
-		return nil, fmt.Errorf("%s: an inputs contract requires a %s run: GITHUB_EVENT_NAME is not set", item.Path, event.Dispatch)
-	case name != event.Dispatch:
-		return nil, fmt.Errorf("%s: an inputs contract requires a %s run, but the current event is %s", item.Path, event.Dispatch, name)
-	}
-	inputs, err := event.Inputs()
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", item.Path, err)
-	}
-	return inputs, nil
 }

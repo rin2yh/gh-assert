@@ -103,6 +103,17 @@ func TestRuntimeReusableWorkflowRequiresInputValues(t *testing.T) {
 	assertContains(t, stderr, "workflow-inputs", true)
 }
 
+func TestRuntimeDualTriggerUsesWorkflowDispatchPayload(t *testing.T) {
+	setEvent(t, `{"inputs":{"environment":"develop"}}`)
+	t.Setenv("FLAG", "true")
+	t.Setenv("GH_ASSERT_INPUTS", "")
+
+	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 1)
+
+	assertContains(t, stderr, "allowed enum", true)
+	assertContains(t, stderr, "workflow-inputs", false)
+}
+
 func TestRuntimeRejectsInputsContractOutsideWorkflowDispatch(t *testing.T) {
 	tests := []struct {
 		name      string

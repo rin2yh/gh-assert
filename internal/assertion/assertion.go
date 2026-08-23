@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rin2yh/gh-assert/internal/contract"
+	"github.com/rin2yh/gh-assert/internal/parser"
 )
 
 const (
@@ -40,20 +40,20 @@ func (osEnvironment) Lookup(name string) (string, bool) { return os.LookupEnv(na
 type Violation struct {
 	Scope    string
 	Name     string
-	Position contract.Position
+	Position parser.Position
 	Message  string
 }
 
-func ValidateRuntime(c *contract.Contract, inputs map[string]string) []Violation {
+func ValidateRuntime(c *parser.Contract, inputs map[string]string) []Violation {
 	return Validate(c, osEnvironment{}, values(inputs))
 }
 
-func Validate(c *contract.Contract, env, inputs source) []Violation {
+func Validate(c *parser.Contract, env, inputs source) []Violation {
 	out := validateSection(envSection, c.Env, env)
 	return append(out, validateSection(inputSection, c.Inputs, inputs)...)
 }
 
-func validateSection(section section, rules map[string]contract.Rule, source source) []Violation {
+func validateSection(section section, rules map[string]parser.Rule, source source) []Violation {
 	var out []Violation
 	for _, name := range slices.Sorted(maps.Keys(rules)) {
 		rule := rules[name]
@@ -73,7 +73,7 @@ func validateSection(section section, rules map[string]contract.Rule, source sou
 	return out
 }
 
-func validateValue(scope, name string, rule contract.Rule, value string) []Violation {
+func validateValue(scope, name string, rule parser.Rule, value string) []Violation {
 	var out []Violation
 	switch rule.Type.Kind {
 	case "string":
