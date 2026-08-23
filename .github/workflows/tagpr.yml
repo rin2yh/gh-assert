@@ -43,18 +43,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.tagpr.outputs.tag }}
+          fetch-depth: 0 # goreleaser がタグを解決するために全履歴が必要
           persist-credentials: false
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - name: Build Action binary
-        run: |
-          mkdir -p dist
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags='-s -w' -o dist/gh-assert-linux-amd64 ./cmd/gh-assert
-          # 呼び出し側はバイナリと同じディレクトリで検証するため、パスを含めずファイル名だけで記録する
-          (cd dist && sha256sum gh-assert-linux-amd64 > gh-assert-linux-amd64.sha256)
-      - name: Upload Action binary
+          cache: false # リリース成果物のビルドにキャッシュを持ち込まない
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          version: "~> v2"
+          args: release --clean
         env:
-          GH_TOKEN: ${{ github.token }}
-          TAG: ${{ needs.tagpr.outputs.tag }}
-        run: gh release upload "$TAG" dist/gh-assert-linux-amd64 dist/gh-assert-linux-amd64.sha256 --clobber
+          GITHUB_TOKEN: ${{ github.token }}

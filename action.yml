@@ -30,8 +30,9 @@ runs:
 
         binary="$RUNNER_TEMP/$asset"
         curl --fail --location --retry 3 "$base_url/$asset" --output "$binary"
-        curl --fail --location --retry 3 "$base_url/$asset.sha256" --output "$binary.sha256"
-        (cd "$(dirname "$binary")" && sha256sum -c "$(basename "$binary").sha256")
+        curl --fail --location --retry 3 "$base_url/checksums.txt" --output "$RUNNER_TEMP/checksums.txt"
+        # checksums.txt は全アセット分を含むので、取得したバイナリだけを検証する
+        (cd "$RUNNER_TEMP" && sha256sum --ignore-missing -c checksums.txt)
         chmod +x "$binary"
         if [[ -n "$GH_ASSERT_CONTRACT" ]]; then
           exec "$binary" "$GH_ASSERT_CONTRACT"

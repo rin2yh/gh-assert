@@ -1,0 +1,35 @@
+version: 2
+
+project_name: gh-assert
+
+builds:
+  - main: ./cmd/gh-assert
+    binary: gh-assert
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  # Action は生バイナリを取得するのでアーカイブ化しない
+  - formats: [binary]
+    name_template: "{{ .ProjectName }}-{{ .Os }}-{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  # tagpr が作成済みのリリースにアセットだけ追加する
+  mode: append
+
+changelog:
+  disable: true
