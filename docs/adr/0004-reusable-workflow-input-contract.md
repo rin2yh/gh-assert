@@ -16,6 +16,14 @@ runtime assertionでは、Reusable Workflow内からActionの`workflow-inputs`�
 
 通常の`workflow_dispatch`では、従来どおりevent payloadからinput値を取得する。
 
+### Package boundaries
+
+YAMLの読み込みと構造体への変換は`internal/parser`に置く。Contract用とWorkflow用のParserを分け、外部へ公開する操作はそれぞれの`Parse`メソッドだけとする。parserはvalidationやWorkflowとcontractの比較を行わない。
+
+gh-assertのcontract、rule、診断位置を表す`Position`など、複数packageから参照するツール固有の構造は`internal/model`に置く。一方、Workflow、event、`workflow_call.inputs`、`GITHUB_EVENT_*`などGitHub Actionsの仕様に由来する構造と処理は`internal/github`へ閉じ込める。GitHub Workflowの構造を汎用modelとして扱わないことで、外部仕様とgh-assert固有のmodelを区別する。
+
+`internal/reusable`はparserが生成したcontract modelとGitHub Workflowを使い、Reusable Workflowの判定、interface比較、runtime inputの選択を行う。cmdはその上位処理を呼び、Reusable Workflowの判定結果やGitHub固有の詳細を受け取らない。
+
 ## Alternatives
 
 job-levelの環境変数でJSONを渡す案は、同じ`toJSON`が必要なうえ、gh-assert内部の環境変数をWorkflowへ露出するため採用しない。inputを1項目ずつActionへ渡す案は、contractごとに名前が異なる汎用Actionではinputを事前定義できず、利用側の記述も増えるため採用しない。JavaScript ActionやReusable Workflowへの変更も、Workflowの`inputs` objectをActionへ渡す境界は変わらない。
