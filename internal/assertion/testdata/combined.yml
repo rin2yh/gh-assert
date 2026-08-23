@@ -1,0 +1,12 @@
+env:
+  NAME:
+    required: true
+    type:
+      string:
+        enum: [staging, production]
+inputs:
+  environment:
+    required: true
+    type:
+      string:
+        enum: [staging, production]

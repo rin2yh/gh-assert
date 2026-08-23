@@ -2,7 +2,7 @@
 
 Declarative environment assertions for GitHub Actions.
 
-`gh-assert` moves common shell checks into a small YAML contract. Version 0.1 validates environment variables at runtime inside a GitHub Action and validates the contract definition from the command line.
+`gh-assert` moves common shell checks into a small YAML contract. Version 0.2 validates environment variables and `workflow_dispatch` inputs at runtime inside a GitHub Action, and validates the contract definition from the command line.
 
 ## Contract
 
@@ -24,9 +24,20 @@ env:
   DRY_RUN:
     type:
       boolean: {}
+inputs:
+  environment:
+    required: true
+    type:
+      string:
+        enum: [staging, production]
+  retries:
+    type:
+      integer:
+        min: 0
+        max: 5
 ```
 
-Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Inputs, defaults, expressions, conditional rules, and step or job contracts are outside v0.1.
+A contract declares `env`, `inputs`, or both. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside v0.2. Reusable Workflow and Composite Action contracts are outside v0.2.
 
 ## Runtime assertion
 

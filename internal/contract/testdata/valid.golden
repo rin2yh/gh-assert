@@ -1,1 +1,2 @@
 env: DRY_RUN,ENVIRONMENT,RETRIES
+inputs: dry-run,environment,retries
