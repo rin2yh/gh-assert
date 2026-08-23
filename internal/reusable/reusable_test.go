@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/rin2yh/gh-assert/internal/contract"
+	"github.com/rin2yh/gh-assert/internal/model"
 	"github.com/rin2yh/gh-assert/internal/test"
 )
 
@@ -18,7 +19,7 @@ func TestValidateReusableInterface(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(contract.Loaded{Path: contractPath, Contract: c}); err != nil {
+	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -45,7 +46,7 @@ func TestValidateReusableInterfaceRejectsMismatch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = Validate(contract.Loaded{Path: contractPath, Contract: c})
+			err = Validate(model.ContractFile{Path: contractPath, Contract: c})
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("error = %v, want containing %q", err, tt.want)
 			}
@@ -62,7 +63,7 @@ func TestValidateReusableInterfaceIgnoresRegularWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(contract.Loaded{Path: contractPath, Contract: c}); err != nil {
+	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -75,7 +76,7 @@ func TestValidateReusableInterfaceAllowsMissingWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(contract.Loaded{Path: contractPath, Contract: c}); err != nil {
+	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
 		t.Fatal(err)
 	}
 }

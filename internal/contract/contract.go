@@ -20,8 +20,6 @@ type StringType = model.StringType
 type IntegerType = model.IntegerType
 type Position = model.Position
 
-type Loaded = model.ContractFile
-
 func LoadFile(path string) (*model.Contract, error) {
 	parsed, err := (parser.ContractParser{}).Parse(path)
 	if err != nil {
@@ -33,7 +31,7 @@ func LoadFile(path string) (*model.Contract, error) {
 	return parsed, nil
 }
 
-func LoadTargets(path string) ([]Loaded, error) {
+func LoadTargets(path string) ([]model.ContractFile, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -43,7 +41,7 @@ func LoadTargets(path string) ([]Loaded, error) {
 		if err != nil {
 			return nil, err
 		}
-		return []Loaded{{Path: path, Contract: parsed}}, nil
+		return []model.ContractFile{{Path: path, Contract: parsed}}, nil
 	}
 
 	var paths []string
@@ -64,13 +62,13 @@ func LoadTargets(path string) ([]Loaded, error) {
 		return nil, fmt.Errorf("no contract files matching *_assert.yml found in %s", path)
 	}
 
-	loaded := make([]Loaded, 0, len(paths))
+	loaded := make([]model.ContractFile, 0, len(paths))
 	for _, path := range paths {
 		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		loaded = append(loaded, Loaded{Path: path, Contract: parsed})
+		loaded = append(loaded, model.ContractFile{Path: path, Contract: parsed})
 	}
 	return loaded, nil
 }
