@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/rin2yh/gh-assert/internal/contract"
+	"github.com/rin2yh/gh-assert/internal/model"
 )
 
 func TestValidateRequiredEnvironment(t *testing.T) {
@@ -93,7 +94,7 @@ func TestValidateRuntimeReadsProcessEnvironment(t *testing.T) {
 	assertViolationCount(t, ValidateRuntime(loadContract(t, "runtime.yml"), nil), 0)
 }
 
-func loadContract(t *testing.T, name string) *contract.Contract {
+func loadContract(t *testing.T, name string) *model.Contract {
 	t.Helper()
 	c, err := contract.LoadFile("testdata/" + name)
 	if err != nil {

@@ -13,13 +13,6 @@ import (
 	"github.com/rin2yh/gh-assert/internal/parser"
 )
 
-type Contract = model.Contract
-type Rule = model.Rule
-type Type = model.Type
-type StringType = model.StringType
-type IntegerType = model.IntegerType
-type Position = model.Position
-
 func LoadFile(path string) (*model.Contract, error) {
 	parsed, err := (parser.ContractParser{}).Parse(path)
 	if err != nil {
