@@ -12,7 +12,7 @@ func TestValidateContract(t *testing.T) {
 	path := writeContract(t, "env: {}\n")
 	stdout, _ := runCommand(t, []string{"validate", path}, 0)
 
-	assertContains(t, stdout, "contract is valid")
+	assertContains(t, stdout, "contract is valid", true)
 }
 
 func TestValidateReportsOutputError(t *testing.T) {
@@ -27,7 +27,7 @@ func TestValidateRejectsInvalidContract(t *testing.T) {
 	path := writeContract(t, "env: []\n")
 	_, stderr := runCommand(t, []string{"validate", path}, 2)
 
-	assertContains(t, stderr, "cannot unmarshal")
+	assertContains(t, stderr, "cannot unmarshal", true)
 }
 
 func TestRuntimeSuccess(t *testing.T) {
@@ -43,8 +43,8 @@ func TestRuntimeFailureHidesValue(t *testing.T) {
 	path := writeContract(t, "env:\n  TOKEN:\n    required: true\n    type:\n      string:\n        enum: [expected]\n")
 	_, stderr := runCommand(t, []string{"--contract", path}, 1)
 
-	assertContains(t, stderr, "allowed enum")
-	assertNotContains(t, stderr, secret)
+	assertContains(t, stderr, "allowed enum", true)
+	assertContains(t, stderr, secret, false)
 }
 
 func TestRuntimeReportsDiagnosticOutputError(t *testing.T) {
@@ -60,8 +60,8 @@ func TestRuntimeAssertsWorkflowDispatchInputs(t *testing.T) {
 	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n")
 	_, stderr := runCommand(t, []string{"--contract", path}, 1)
 
-	assertContains(t, stderr, "input environment")
-	assertNotContains(t, stderr, "develop")
+	assertContains(t, stderr, "input environment", true)
+	assertContains(t, stderr, "develop", false)
 }
 
 func TestRuntimeSucceedsWithValidInputs(t *testing.T) {
@@ -86,7 +86,7 @@ func TestRuntimeRejectsInputsContractOutsideWorkflowDispatch(t *testing.T) {
 			path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string: {}\n")
 			_, stderr := runCommand(t, []string{"--contract", path}, 2)
 
-			assertContains(t, stderr, "workflow_dispatch")
+			assertContains(t, stderr, "workflow_dispatch", true)
 		})
 	}
 }
@@ -111,25 +111,25 @@ func TestValidateAcceptsInputsContract(t *testing.T) {
 	path := writeContract(t, "inputs:\n  environment:\n    required: true\n    type:\n      string:\n        enum: [staging, production]\n")
 	stdout, _ := runCommand(t, []string{"validate", path}, 0)
 
-	assertContains(t, stdout, "contract is valid")
+	assertContains(t, stdout, "contract is valid", true)
 }
 
 func TestHelp(t *testing.T) {
 	stdout, _ := runCommand(t, []string{"help"}, 0)
 
-	assertContains(t, stdout, "validate")
+	assertContains(t, stdout, "validate", true)
 }
 
 func TestRejectsUnknownCommand(t *testing.T) {
 	_, stderr := runCommand(t, []string{"unknown"}, 2)
 
-	assertContains(t, stderr, "unknown")
+	assertContains(t, stderr, "unknown", true)
 }
 
 func TestValidateRejectsExtraArgument(t *testing.T) {
 	_, stderr := runCommand(t, []string{"validate", "one.yml", "two.yml"}, 2)
 
-	assertContains(t, stderr, "at most 1 arg")
+	assertContains(t, stderr, "at most 1 arg", true)
 }
 
 func runCommand(t *testing.T, args []string, wantCode int) (string, string) {
@@ -147,17 +147,10 @@ func assertExitCode(t *testing.T, got, want int, stderr string) {
 	}
 }
 
-func assertContains(t *testing.T, got, want string) {
+func assertContains(t *testing.T, got, want string, wantContains bool) {
 	t.Helper()
-	if !strings.Contains(got, want) {
-		t.Errorf("output = %q, want it to contain %q", got, want)
-	}
-}
-
-func assertNotContains(t *testing.T, got, unwanted string) {
-	t.Helper()
-	if strings.Contains(got, unwanted) {
-		t.Errorf("output = %q, want it to omit %q", got, unwanted)
+	if strings.Contains(got, want) != wantContains {
+		t.Errorf("output = %q, contains %q = %v, want %v", got, want, !wantContains, wantContains)
 	}
 }
 
