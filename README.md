@@ -44,62 +44,47 @@ A contract declares `env`, `inputs`, or both. Supported constraints are `require
 Place the Action in a workflow step and pass the environment values that the contract names:
 
 ```yaml
-- uses: rin2yh/gh-assert@v1
+- uses: rin2yh/gh-assert@v0.0.2
   with:
     contract: .github/workflows/deploy_assert.yml
-    version: v0.2.0
+    version: v0.0.2
   env:
     ENVIRONMENT: ${{ vars.DEPLOY_ENVIRONMENT }}
     RETRIES: ${{ vars.DEPLOY_RETRIES }}
     DRY_RUN: ${{ vars.DRY_RUN }}
 ```
 
-Inputs need no wiring. `gh-assert` reads them from the event payload of the running workflow, so the contract is the only place that names them:
-
-```yaml
-on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        type: choice
-        options: [staging, production]
-      retries:
-        type: number
-```
-
-The Action targets `ubuntu-latest` in v0.2. It downloads the Linux amd64 release binary and verifies its checksum before execution. It exits non-zero when a required variable or input is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
-
-A contract that declares one or more `inputs` rules asserts only `workflow_dispatch` runs. On any other event the command fails with an exit code of 2 rather than reporting a passing assertion. An empty `inputs: {}` section declares no rule and asserts nothing, the same as an empty `env: {}` section, so it does not restrict the event. `workflow_call` inputs are v0.3.
+Pick a tag that [Releases](https://github.com/rin2yh/gh-assert/releases) already publishes; the example above names the next one. The Action runs on Linux, macOS and Windows runners on x64 and arm64. It picks the release binary for `RUNNER_OS` and `RUNNER_ARCH` and verifies it against the release's `checksums.txt` before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
 
 When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
 
 ## Validate a contract
 
-Install the extension:
+Install the command:
 
 ```bash
-gh extension install rin2yh/gh-assert
+go install github.com/rin2yh/gh-assert/cmd/gh-assert@latest
 ```
 
 Validate all contracts under `.github`:
 
 ```bash
-gh assert validate
+gh-assert validate
 ```
 
 To validate one contract, pass its path as a positional argument.
 
 ```bash
-gh assert validate .github/workflows/deploy_assert.yml
+gh-assert validate .github/workflows/deploy_assert.yml
 ```
 
-The same command is available as `gh-assert validate ...` after building locally. Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. It does not execute a workflow.
+Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. It does not execute a workflow.
 
 Runtime assertion follows the same path rule:
 
 ```bash
-gh assert
-gh assert .github/workflows/deploy_assert.yml
+gh-assert
+gh-assert .github/workflows/deploy_assert.yml
 ```
 
 ## Development
@@ -109,7 +94,7 @@ go test ./...
 go vet ./...
 ```
 
-The project is released as a precompiled GitHub CLI Extension. Releases are tagged and published by tagpr. The repository is available at `github.com/rin2yh/gh-assert`.
+Releases are tagged and published by tagpr, and the same run builds the binaries with GoReleaser and uploads them. A release carries `gh-assert-<os>-<arch>` for linux, darwin and windows on amd64 and arm64, plus `checksums.txt`. The repository is available at `github.com/rin2yh/gh-assert`.
 
 ## License
 

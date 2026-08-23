@@ -5,3 +5,5 @@ release = true
 	vPrefix = true
 	releaseBranch = main
 	versionFile = -
+	# アセットのアップロードが終わるまでリリースを公開しない
+	release = draft
