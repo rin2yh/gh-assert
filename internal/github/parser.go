@@ -1,22 +1,21 @@
-package parser
+package github
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/rin2yh/gh-assert/internal/github"
 	"gopkg.in/yaml.v3"
 )
 
-type WorkflowParser struct {
+type Parser struct {
 	path string
 }
 
-func NewWorkflowParser(path string) *WorkflowParser {
-	return &WorkflowParser{path: path}
+func NewParser(path string) *Parser {
+	return &Parser{path: path}
 }
 
-func (p *WorkflowParser) Parse() (*github.Workflow, error) {
+func (p *Parser) Parse() (*Workflow, error) {
 	data, err := os.ReadFile(p.path)
 	if err != nil {
 		return nil, err
@@ -24,18 +23,18 @@ func (p *WorkflowParser) Parse() (*github.Workflow, error) {
 	return p.parse(data)
 }
 
-func (p *WorkflowParser) parse(data []byte) (*github.Workflow, error) {
+func (p *Parser) parse(data []byte) (*Workflow, error) {
 	var document yaml.Node
 	if err := yaml.Unmarshal(data, &document); err != nil {
 		return nil, fmt.Errorf("%s: %w", p.path, err)
 	}
-	workflow := &github.Workflow{Events: map[string]github.WorkflowEvent{}}
+	workflow := &Workflow{Events: map[string]WorkflowEvent{}}
 	if len(document.Content) == 0 {
 		return workflow, nil
 	}
 	on := mappingValue(document.Content[0], "on")
 	for name, node := range eventNodes(on) {
-		event := github.WorkflowEvent{}
+		event := WorkflowEvent{}
 		inputs := mappingValue(node, "inputs")
 		if inputs != nil {
 			if err := inputs.Decode(&event.Inputs); err != nil {

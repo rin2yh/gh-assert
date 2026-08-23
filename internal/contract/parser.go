@@ -1,4 +1,4 @@
-package parser
+package contract
 
 import (
 	"bytes"
@@ -9,15 +9,15 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ContractParser struct {
+type Parser struct {
 	path string
 }
 
-func NewContractParser(path string) *ContractParser {
-	return &ContractParser{path: path}
+func NewParser(path string) *Parser {
+	return &Parser{path: path}
 }
 
-func (p *ContractParser) Parse() (*model.Contract, error) {
+func (p *Parser) Parse() (*model.Contract, error) {
 	data, err := os.ReadFile(p.path)
 	if err != nil {
 		return nil, err
@@ -25,7 +25,7 @@ func (p *ContractParser) Parse() (*model.Contract, error) {
 	return p.parse(data)
 }
 
-func (p *ContractParser) parse(data []byte) (*model.Contract, error) {
+func (p *Parser) parse(data []byte) (*model.Contract, error) {
 	var parsed model.Contract
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
@@ -44,7 +44,7 @@ func (p *ContractParser) parse(data []byte) (*model.Contract, error) {
 	}, nil
 }
 
-func (p *ContractParser) rulesWithPositions(section *yaml.Node, rules map[string]model.Rule) map[string]model.Rule {
+func (p *Parser) rulesWithPositions(section *yaml.Node, rules map[string]model.Rule) map[string]model.Rule {
 	if rules == nil {
 		return nil
 	}
@@ -70,4 +70,16 @@ func (p *ContractParser) rulesWithPositions(section *yaml.Node, rules map[string
 		result[name] = rule
 	}
 	return result
+}
+
+func mappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+	return nil
 }

@@ -10,11 +10,10 @@ import (
 	"strings"
 
 	"github.com/rin2yh/gh-assert/internal/model"
-	"github.com/rin2yh/gh-assert/internal/parser"
 )
 
 func LoadFile(path string) (*model.Contract, error) {
-	parsed, err := parser.NewContractParser(path).Parse()
+	parsed, err := NewParser(path).Parse()
 	if err != nil {
 		return nil, err
 	}
