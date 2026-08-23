@@ -49,31 +49,31 @@ When `contract` is omitted, the Action discovers every `*_assert.yml` under `.gi
 
 ## Validate a contract
 
-Install the extension:
+Install the command:
 
 ```bash
-gh extension install rin2yh/gh-assert
+go install github.com/rin2yh/gh-assert/cmd/gh-assert@latest
 ```
 
 Validate all contracts under `.github`:
 
 ```bash
-gh assert validate
+gh-assert validate
 ```
 
 To validate one contract, pass its path as a positional argument.
 
 ```bash
-gh assert validate .github/workflows/deploy_assert.yml
+gh-assert validate .github/workflows/deploy_assert.yml
 ```
 
-The same command is available as `gh-assert validate ...` after building locally. Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. It does not execute a workflow.
+Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. It does not execute a workflow.
 
 Runtime assertion follows the same path rule:
 
 ```bash
-gh assert
-gh assert .github/workflows/deploy_assert.yml
+gh-assert
+gh-assert .github/workflows/deploy_assert.yml
 ```
 
 ## Development
@@ -83,7 +83,7 @@ go test ./...
 go vet ./...
 ```
 
-The project is released as a precompiled GitHub CLI Extension. Releases are tagged and published by tagpr. The repository is available at `github.com/rin2yh/gh-assert`.
+Releases are tagged and published by tagpr, and the same run uploads `gh-assert-linux-amd64` with its `.sha256` for the Action. The repository is available at `github.com/rin2yh/gh-assert`.
 
 ## License
 
