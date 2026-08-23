@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"maps"
 	"os"
 	"slices"
@@ -45,11 +46,38 @@ type Violation struct {
 }
 
 func Assert(item model.ContractFile) ([]Violation, error) {
-	inputs, err := inputs(item)
+	if len(item.Contract.Inputs) == 0 {
+		return assert(item.Contract, environment{}, values(nil)), nil
+	}
+
+	reusable, err := isReusableWorkflow(item.Path)
 	if err != nil {
 		return nil, err
 	}
-	return assert(item.Contract, environment{}, values(inputs)), nil
+	if reusable {
+		if os.Getenv(inputsJSON) == "" {
+			return nil, fmt.Errorf("%s: reusable workflow inputs must be passed with workflow-inputs: ${{ toJSON(inputs) }}", item.Path)
+		}
+		inputs, err := loadWorkflowInputs()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", item.Path, err)
+		}
+		return assert(item.Contract, environment{}, values(inputs)), nil
+	}
+
+	event := os.Getenv("GITHUB_EVENT_NAME")
+	if event == workflowDispatch {
+		inputs, err := loadEventInputs()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", item.Path, err)
+		}
+		return assert(item.Contract, environment{}, values(inputs)), nil
+	}
+
+	if event == "" {
+		return nil, fmt.Errorf("%s: an inputs contract requires a %s run: GITHUB_EVENT_NAME is not set", item.Path, workflowDispatch)
+	}
+	return nil, fmt.Errorf("%s: an inputs contract requires a %s run, but the current event is %s", item.Path, workflowDispatch, event)
 }
 
 func assert(c *model.Contract, env, inputs source) []Violation {
