@@ -10,7 +10,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rin2yh/gh-assert/internal/composite"
 	"github.com/rin2yh/gh-assert/internal/github"
 )
 
@@ -34,14 +33,6 @@ func isReusableWorkflow(contractPath string) (bool, error) {
 	}
 	_, reusable := workflow.Events["workflow_call"]
 	return reusable, nil
-}
-
-func requiresForwardedInputs(contractPath string) (bool, error) {
-	reusable, err := isReusableWorkflow(contractPath)
-	if err != nil || reusable {
-		return reusable, err
-	}
-	return composite.Is(contractPath)
 }
 
 func loadEventInputs() (map[string]string, error) {

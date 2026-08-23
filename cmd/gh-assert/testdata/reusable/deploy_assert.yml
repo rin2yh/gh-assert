@@ -3,9 +3,11 @@ env:
     required: true
     type:
       boolean: {}
-inputs:
-  environment:
-    required: true
-    type:
-      string:
-        enum: [staging, production]
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type:
+          string:
+            enum: [staging, production]
