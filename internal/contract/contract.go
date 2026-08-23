@@ -80,9 +80,6 @@ func Validate(path string, parsed *model.Contract) error {
 	}
 	for _, event := range slices.Sorted(maps.Keys(parsed.On)) {
 		scoped := parsed.On[event]
-		if scoped.Env == nil && scoped.Inputs == nil {
-			return fmt.Errorf("%s: on.%s requires env or inputs", path, event)
-		}
 		if err := validateSection("on."+event+".env", scoped.Env); err != nil {
 			return err
 		}

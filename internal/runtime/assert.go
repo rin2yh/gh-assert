@@ -47,9 +47,6 @@ type Violation struct {
 
 func Assert(item model.ContractFile) ([]Violation, error) {
 	event := os.Getenv("GITHUB_EVENT_NAME")
-	if len(item.Contract.On) > 0 && event == "" {
-		return nil, fmt.Errorf("%s: an event-specific contract requires GITHUB_EVENT_NAME", item.Path)
-	}
 	effective := item.Contract.Effective(event)
 	if len(effective.Inputs) == 0 {
 		return assert(effective, environment{}, values(nil)), nil

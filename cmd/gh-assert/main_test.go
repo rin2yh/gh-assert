@@ -131,22 +131,6 @@ func TestRuntimeAppliesEventSpecificInputs(t *testing.T) {
 	assertContains(t, stderr, "input deploy_type", true)
 }
 
-func TestRuntimeEventSpecificRuleReplacesCommonRule(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "workflow_run")
-	t.Setenv("MODE", "event")
-	path := writeContract(t, "env:\n  MODE:\n    required: true\n    type:\n      string:\n        enum: [common]\non:\n  workflow_run:\n    env:\n      MODE:\n        required: true\n        type:\n          string:\n            enum: [event]\n")
-
-	runCommand(t, []string{"--contract", path}, 0)
-}
-
-func TestRuntimeEventSpecificContractRequiresEventName(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", "")
-	path := writeContract(t, "on:\n  workflow_run:\n    env: {}\n")
-
-	_, stderr := runCommand(t, []string{"--contract", path}, 2)
-	assertContains(t, stderr, "GITHUB_EVENT_NAME", true)
-}
-
 func TestRuntimeAssertsReusableWorkflowInputValues(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_NAME", "push")
 	t.Setenv("GITHUB_EVENT_PATH", "")

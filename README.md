@@ -66,7 +66,7 @@ on:
             enum: [success]
 ```
 
-For `workflow_dispatch`, this example asserts `CLOUDFLARE_API_TOKEN` and `deploy_type`; for `workflow_run`, it asserts `CLOUDFLARE_API_TOKEN` and `CONCLUSION`. An event-specific rule replaces a top-level rule with the same name. Events without a matching `on` section use only the top-level rules.
+For `workflow_dispatch`, this example asserts `CLOUDFLARE_API_TOKEN` and `deploy_type`; for `workflow_run`, it asserts `CLOUDFLARE_API_TOKEN` and `CONCLUSION`. Events without a matching `on` section use only the top-level rules.
 
 ## Runtime assertion
 

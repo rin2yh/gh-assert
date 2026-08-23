@@ -90,14 +90,6 @@ func TestParseAcceptsEventOnlyContract(t *testing.T) {
 	}
 }
 
-func TestParseRejectsEmptyEventContract(t *testing.T) {
-	path := test.WriteFile(t, t.TempDir(), "contract.yml", "on:\n  workflow_run: {}\n")
-	_, err := LoadFile(path)
-	if err == nil || !strings.Contains(err.Error(), "on.workflow_run requires env or inputs") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestParseValidatesEventSpecificRules(t *testing.T) {
 	path := test.WriteFile(t, t.TempDir(), "contract.yml", "on:\n  workflow_dispatch:\n    inputs:\n      retries:\n        type:\n          integer:\n            min: 2\n            max: 1\n")
 	_, err := LoadFile(path)
