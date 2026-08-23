@@ -65,6 +65,9 @@ Reusable Workflowをcontractの対象に追加する。
 ## Future
 
 * GitHub annotation
+* `gh assert init`
+  * contractを対象にgh-assertのstepを生成・更新する
+  * Reusable Workflowでは`workflow-inputs: ${{ toJSON(inputs) }}`を自動で追加する
 
 ## Non-goals
 
