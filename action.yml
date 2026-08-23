@@ -14,7 +14,7 @@ runs:
       id: install
       shell: bash
       env:
-        GH_ASSERT_VERSION: v0.0.3
+        GH_ASSERT_VERSION: v0.0.4
       run: |
         set -euo pipefail
 
