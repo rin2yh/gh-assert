@@ -36,7 +36,11 @@ func isReusableWorkflow(contractPath string) (bool, error) {
 	return reusable, nil
 }
 
-func isCompositeAction(contractPath string) (bool, error) {
+func requiresForwardedInputs(contractPath string) (bool, error) {
+	reusable, err := isReusableWorkflow(contractPath)
+	if err != nil || reusable {
+		return reusable, err
+	}
 	return composite.Is(contractPath)
 }
 

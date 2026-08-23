@@ -4,11 +4,11 @@ inputs:
   contract:
     description: Path to the contract file.
     required: false
-  workflow-inputs:
-    description: JSON-encoded inputs context for a reusable workflow.
+  inputs:
+    description: JSON-encoded inputs context.
     required: false
-  action-inputs:
-    description: JSON-encoded inputs context for a Composite Action.
+  workflow-inputs:
+    description: Deprecated alias for inputs.
     required: false
 runs:
   using: composite
@@ -53,7 +53,7 @@ runs:
       env:
         GH_ASSERT_BINARY: ${{ steps.install.outputs.binary }}
         GH_ASSERT_CONTRACT: ${{ inputs.contract }}
-        GH_ASSERT_INPUTS: ${{ inputs.action-inputs || inputs.workflow-inputs }}
+        GH_ASSERT_INPUTS: ${{ inputs.inputs || inputs.workflow-inputs }}
       run: |
         set -euo pipefail
         if [[ -n "$GH_ASSERT_CONTRACT" ]]; then

@@ -10,7 +10,7 @@ Action inputsはGitHub Actions上では文字列として扱われる。一方�
 
 `.github/actions/<name>/action.yml`の隣に`action_assert.yml`を置く。`validate`は`action.yml`がComposite Actionの場合に、input名と`required`をcontractと比較する。contractの型はAction metadataとは比較せず、runtime値へ適用する。
 
-runtime assertionでは`action-inputs: ${{ toJSON(inputs) }}`によってAction inputsを明示的にgh-assertへ渡す。envはcontractに定義し、runtime assertionだけを行う。
+runtime assertionでは`inputs: ${{ toJSON(inputs) }}`によってAction inputsを明示的にgh-assertへ渡す。Reusable WorkflowとComposite Actionで同じ入力名を使用する。envはcontractに定義し、runtime assertionだけを行う。
 
 GitHub Actions由来のAction構造とYAML parserは`internal/github`、Actionとcontractを比較する処理は`internal/composite`へ置く。
 

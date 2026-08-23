@@ -129,7 +129,7 @@ func TestRuntimeReusableWorkflowRequiresInputValues(t *testing.T) {
 
 	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 2)
 
-	assertContains(t, stderr, "workflow-inputs", true)
+	assertContains(t, stderr, "inputs:", true)
 }
 
 func TestRuntimeReusableWorkflowUsesInputsContextForWorkflowDispatchCaller(t *testing.T) {
@@ -157,7 +157,7 @@ func TestRuntimeCompositeActionRequiresInputValues(t *testing.T) {
 
 	_, stderr := runCommand(t, []string{"--contract", "testdata/composite/action_assert.yml"}, 2)
 
-	assertContains(t, stderr, "action-inputs", true)
+	assertContains(t, stderr, "inputs:", true)
 }
 
 func TestRuntimeCompositeActionAssertsEnvironmentAndInputs(t *testing.T) {
