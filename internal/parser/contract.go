@@ -22,15 +22,15 @@ func (p *ContractParser) Parse() (*model.Contract, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseContract(p.path, data)
+	return p.parse(data)
 }
 
-func parseContract(path string, data []byte) (*model.Contract, error) {
+func (p *ContractParser) parse(data []byte) (*model.Contract, error) {
 	var parsed model.Contract
 	decoder := yaml.NewDecoder(bytes.NewReader(data))
 	decoder.KnownFields(true)
 	if err := decoder.Decode(&parsed); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, fmt.Errorf("%s: %w", p.path, err)
 	}
 
 	var document yaml.Node
@@ -39,12 +39,12 @@ func parseContract(path string, data []byte) (*model.Contract, error) {
 	}
 	root := document.Content[0]
 	return &model.Contract{
-		Env:    rulesWithPositions(path, mappingValue(root, "env"), parsed.Env),
-		Inputs: rulesWithPositions(path, mappingValue(root, "inputs"), parsed.Inputs),
+		Env:    p.rulesWithPositions(mappingValue(root, "env"), parsed.Env),
+		Inputs: p.rulesWithPositions(mappingValue(root, "inputs"), parsed.Inputs),
 	}, nil
 }
 
-func rulesWithPositions(path string, section *yaml.Node, rules map[string]model.Rule) map[string]model.Rule {
+func (p *ContractParser) rulesWithPositions(section *yaml.Node, rules map[string]model.Rule) map[string]model.Rule {
 	if rules == nil {
 		return nil
 	}
@@ -62,10 +62,10 @@ func rulesWithPositions(path string, section *yaml.Node, rules map[string]model.
 		if !ok {
 			continue
 		}
-		rule.Position = model.Position{Path: path, Line: node.Line, Column: node.Column}
+		rule.Position = model.Position{Path: p.path, Line: node.Line, Column: node.Column}
 		if typeNode := mappingValue(node, "type"); typeNode != nil && len(typeNode.Content) >= 2 {
 			spec := typeNode.Content[1]
-			rule.TypePosition = model.Position{Path: path, Line: spec.Line, Column: spec.Column}
+			rule.TypePosition = model.Position{Path: p.path, Line: spec.Line, Column: spec.Column}
 		}
 		result[name] = rule
 	}

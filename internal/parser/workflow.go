@@ -21,13 +21,13 @@ func (p *WorkflowParser) Parse() (*github.Workflow, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseWorkflow(p.path, data)
+	return p.parse(data)
 }
 
-func parseWorkflow(path string, data []byte) (*github.Workflow, error) {
+func (p *WorkflowParser) parse(data []byte) (*github.Workflow, error) {
 	var document yaml.Node
 	if err := yaml.Unmarshal(data, &document); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+		return nil, fmt.Errorf("%s: %w", p.path, err)
 	}
 	workflow := &github.Workflow{Events: map[string]github.WorkflowEvent{}}
 	if len(document.Content) == 0 {
@@ -39,7 +39,7 @@ func parseWorkflow(path string, data []byte) (*github.Workflow, error) {
 		inputs := mappingValue(node, "inputs")
 		if inputs != nil {
 			if err := inputs.Decode(&event.Inputs); err != nil {
-				return nil, fmt.Errorf("%s: %s.inputs: %w", path, name, err)
+				return nil, fmt.Errorf("%s: %s.inputs: %w", p.path, name, err)
 			}
 		}
 		workflow.Events[name] = event

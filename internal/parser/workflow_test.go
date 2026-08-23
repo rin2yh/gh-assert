@@ -19,7 +19,7 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workflow, err := parseWorkflow("workflow.yml", []byte("on: "+tt.on+"\n"))
+			workflow, err := NewWorkflowParser("workflow.yml").parse([]byte("on: " + tt.on + "\n"))
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -41,7 +41,7 @@ func TestContractParserReturnsReadError(t *testing.T) {
 }
 
 func TestParseContractDoesNotValidateRules(t *testing.T) {
-	parsed, err := parseContract("contract.yml", []byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
+	parsed, err := NewContractParser("contract.yml").parse([]byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
