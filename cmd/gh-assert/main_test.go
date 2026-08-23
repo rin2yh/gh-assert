@@ -42,11 +42,28 @@ func TestValidateRejectsReusableWorkflowInterfaceMismatch(t *testing.T) {
 	assertContains(t, stderr, "reusable workflow interface does not match contract", true)
 }
 
-func TestRuntimeSuccess(t *testing.T) {
+func TestRuntimeContractPathArguments(t *testing.T) {
 	t.Setenv("FLAG", "true")
 	path := writeContract(t, "env:\n  FLAG:\n    required: true\n    type:\n      boolean: {}\n")
 
-	runCommand(t, []string{"--contract", path}, 0)
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "contract flag", args: []string{"--contract", path}},
+		{name: "positional argument", args: []string{path}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runCommand(t, tt.args, 0)
+		})
+	}
+}
+
+func TestRuntimeRejectsContractFlagAndPositionalArgument(t *testing.T) {
+	_, stderr := runCommand(t, []string{"--contract", "one.yml", "two.yml"}, 2)
+
+	assertContains(t, stderr, "expected a contract path or --contract <path>", true)
 }
 
 func TestRuntimeFailureHidesValue(t *testing.T) {
