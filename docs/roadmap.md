@@ -1,6 +1,8 @@
 # Roadmap
 
-## v0.1 — Env contract and runtime assertion
+このroadmapに記載した内容がすべて完了した時点でv0.1.0とする。
+
+## v0.0.2 — Env contract and runtime assertion
 
 `*_assert.yml` にenv contractを定義し、contractのvalidationとGitHub Actions実行時のruntime assertionまで対応する。
 
@@ -19,7 +21,7 @@
 * GitHub Actionとして実行可能にする
 * `*_assert.yml` をvalidateとruntime assertionで共有する
 
-v0.1ではenvだけをcontractの対象とする。inputs、job/step env、Reusable Workflow、Composite Action contractは後続versionで扱う。
+v0.0.2ではenvだけをcontractの対象とする。inputs、job/step env、Reusable Workflow、Composite Action contractは後続versionで扱う。
 
 `validate` はcontract定義のみを検証する。
 
@@ -29,7 +31,7 @@ v0.1ではenvだけをcontractの対象とする。inputs、job/step env、Reusa
 * invalid regex
 * `min > max`
 
-## v0.2 — Workflow inputs
+## v0.0.3 — Workflow inputs
 
 Workflowが受け取るinputsをcontractの対象に追加する。
 
@@ -37,7 +39,7 @@ Workflowが受け取るinputsをcontractの対象に追加する。
 * required / type / value constraints
 * runtime assertion
 
-## v0.3 — Reusable Workflows
+## v0.0.4 — Reusable Workflows
 
 Reusable Workflowをcontractの対象に追加する。
 
@@ -45,7 +47,7 @@ Reusable Workflowをcontractの対象に追加する。
 * reusable workflowの公開interfaceに対するcontract
 * runtime assertion
 
-## v0.4 — Composite Actions
+## v0.1.0 — Composite Actions
 
 `.github/actions/` 配下のComposite Actionをcontractの対象に追加する。
 
