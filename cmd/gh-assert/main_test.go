@@ -149,8 +149,8 @@ func assertExitCode(t *testing.T, got, want int, stderr string) {
 
 func assertContains(t *testing.T, got, want string, wantContains bool) {
 	t.Helper()
-	if strings.Contains(got, want) != wantContains {
-		t.Errorf("output = %q, contains %q = %v, want %v", got, want, !wantContains, wantContains)
+	if contains := strings.Contains(got, want); contains != wantContains {
+		t.Errorf("output = %q, contains %q = %v, want %v", got, want, contains, wantContains)
 	}
 }
 
