@@ -1,4 +1,4 @@
-package event
+package github
 
 import (
 	"testing"
@@ -8,9 +8,9 @@ import (
 )
 
 func TestName(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", Dispatch)
-	if got := Name(); got != Dispatch {
-		t.Fatalf("got %q, want %q", got, Dispatch)
+	t.Setenv("GITHUB_EVENT_NAME", WorkflowDispatch)
+	if got := EventName(); got != WorkflowDispatch {
+		t.Fatalf("got %q, want %q", got, WorkflowDispatch)
 	}
 }
 
@@ -35,7 +35,7 @@ func TestInputsReadsEventPayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
 
-			inputs, err := Inputs()
+			inputs, err := EventInputs()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -84,7 +84,7 @@ func TestInputsRejectsInvalidPayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
 
-			_, err := Inputs()
+			_, err := EventInputs()
 			test.AssertError(t, err)
 		})
 	}
@@ -99,7 +99,7 @@ func TestInputsRejectsUnavailablePayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", tt.path)
 
-			_, err := Inputs()
+			_, err := EventInputs()
 			test.AssertError(t, err)
 		})
 	}

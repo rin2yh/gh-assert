@@ -66,7 +66,8 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := parse("contract.yml", []byte(tt.content))
+			path := test.WriteFile(t, t.TempDir(), "contract.yml", tt.content)
+			c, err := LoadFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -98,11 +99,7 @@ func TestLoadTargetsRejectsEmptyDirectory(t *testing.T) {
 func parseFile(t *testing.T, name string) (*Contract, error) {
 	t.Helper()
 	path := filepath.Join("testdata", name+".yml")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return parse(path, data)
+	return LoadFile(path)
 }
 
 func assertParseFails(t *testing.T, name string) string {

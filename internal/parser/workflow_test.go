@@ -16,7 +16,7 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workflow, err := ParseWorkflow("workflow.yml", []byte("on: "+tt.on+"\n"))
+			workflow, err := parseWorkflow("workflow.yml", []byte("on: "+tt.on+"\n"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -29,7 +29,7 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 }
 
 func TestParseWorkflowInputs(t *testing.T) {
-	workflow, err := ParseWorkflow("workflow.yml", []byte("on:\n  workflow_call:\n    inputs:\n      environment:\n        required: true\n        type: string\n"))
+	workflow, err := parseWorkflow("workflow.yml", []byte("on:\n  workflow_call:\n    inputs:\n      environment:\n        required: true\n        type: string\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

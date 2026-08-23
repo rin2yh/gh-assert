@@ -9,31 +9,21 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/rin2yh/gh-assert/internal/model"
 	"github.com/rin2yh/gh-assert/internal/parser"
 )
 
-type Contract = parser.Contract
-type Rule = parser.Rule
-type Type = parser.Type
-type StringType = parser.StringType
-type IntegerType = parser.IntegerType
-type Position = parser.Position
+type Contract = model.Contract
+type Rule = model.Rule
+type Type = model.Type
+type StringType = model.StringType
+type IntegerType = model.IntegerType
+type Position = model.Position
 
-type Loaded = parser.LoadedContract
+type Loaded = model.ContractFile
 
-func LoadFile(path string) (*parser.Contract, error) {
-	parsed, err := parser.LoadContract(path)
-	if err != nil {
-		return nil, err
-	}
-	if err := Validate(path, parsed); err != nil {
-		return nil, err
-	}
-	return parsed, nil
-}
-
-func parse(path string, data []byte) (*parser.Contract, error) {
-	parsed, err := parser.ParseContract(path, data)
+func LoadFile(path string) (*model.Contract, error) {
+	parsed, err := (parser.ContractParser{}).Parse(path)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +75,7 @@ func LoadTargets(path string) ([]Loaded, error) {
 	return loaded, nil
 }
 
-func Validate(path string, parsed *parser.Contract) error {
+func Validate(path string, parsed *model.Contract) error {
 	if parsed.Env == nil && parsed.Inputs == nil {
 		return fmt.Errorf("%s: env or inputs is required", path)
 	}
@@ -95,7 +85,7 @@ func Validate(path string, parsed *parser.Contract) error {
 	return validateSection("inputs", parsed.Inputs)
 }
 
-func validateSection(section string, rules map[string]parser.Rule) error {
+func validateSection(section string, rules map[string]model.Rule) error {
 	for _, name := range slices.Sorted(maps.Keys(rules)) {
 		rule := rules[name]
 		position := rule.TypePosition
@@ -110,7 +100,7 @@ func validateSection(section string, rules map[string]parser.Rule) error {
 	return nil
 }
 
-func validateRule(section, name string, rule *parser.Rule, position parser.Position) error {
+func validateRule(section, name string, rule *model.Rule, position model.Position) error {
 	types := 0
 	if rule.Type.String != nil {
 		types++

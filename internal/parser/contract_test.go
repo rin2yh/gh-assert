@@ -3,7 +3,7 @@ package parser
 import "testing"
 
 func TestParseContractDoesNotValidateRules(t *testing.T) {
-	parsed, err := ParseContract("contract.yml", []byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
+	parsed, err := parseContract("contract.yml", []byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

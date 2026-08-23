@@ -1,4 +1,4 @@
-package event
+package github
 
 import (
 	"bytes"
@@ -10,13 +10,13 @@ import (
 	"strconv"
 )
 
-const Dispatch = "workflow_dispatch"
+const WorkflowDispatch = "workflow_dispatch"
 
 const InputsJSON = "GH_ASSERT_INPUTS"
 
-func Name() string { return os.Getenv("GITHUB_EVENT_NAME") }
+func EventName() string { return os.Getenv("GITHUB_EVENT_NAME") }
 
-func Inputs() (map[string]string, error) {
+func EventInputs() (map[string]string, error) {
 	path := os.Getenv("GITHUB_EVENT_PATH")
 	if path == "" {
 		return nil, errors.New("GITHUB_EVENT_PATH is not set")

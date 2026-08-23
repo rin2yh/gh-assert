@@ -4,42 +4,32 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/rin2yh/gh-assert/internal/github"
 	"gopkg.in/yaml.v3"
 )
 
-type Workflow struct {
-	Events map[string]WorkflowEvent
-}
+type WorkflowParser struct{}
 
-type WorkflowEvent struct {
-	Inputs map[string]WorkflowInput
-}
-
-type WorkflowInput struct {
-	Required bool   `yaml:"required"`
-	Type     string `yaml:"type"`
-}
-
-func LoadWorkflow(path string) (*Workflow, error) {
+func (WorkflowParser) Parse(path string) (*github.Workflow, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	return ParseWorkflow(path, data)
+	return parseWorkflow(path, data)
 }
 
-func ParseWorkflow(path string, data []byte) (*Workflow, error) {
+func parseWorkflow(path string, data []byte) (*github.Workflow, error) {
 	var document yaml.Node
 	if err := yaml.Unmarshal(data, &document); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	workflow := &Workflow{Events: map[string]WorkflowEvent{}}
+	workflow := &github.Workflow{Events: map[string]github.WorkflowEvent{}}
 	if len(document.Content) == 0 {
 		return workflow, nil
 	}
 	on := mappingValue(document.Content[0], "on")
 	for name, node := range eventNodes(on) {
-		event := WorkflowEvent{}
+		event := github.WorkflowEvent{}
 		inputs := mappingValue(node, "inputs")
 		if inputs != nil {
 			if err := inputs.Decode(&event.Inputs); err != nil {
