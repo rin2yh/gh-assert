@@ -21,19 +21,34 @@ runs:
         : "${GH_ASSERT_VERSION:=latest}"
 
         repo="rin2yh/gh-assert"
-        asset="gh-assert-linux-amd64"
+
+        case "$RUNNER_OS" in
+          Linux) os=linux; ext="" ;;
+          macOS) os=darwin; ext="" ;;
+          Windows) os=windows; ext=".exe" ;;
+          *) echo "::error::gh-assert: unsupported runner OS $RUNNER_OS" >&2; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64) arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::gh-assert: unsupported runner architecture $RUNNER_ARCH" >&2; exit 1 ;;
+        esac
+        asset="gh-assert-${os}-${arch}${ext}"
+
         if [[ "$GH_ASSERT_VERSION" == "latest" ]]; then
           base_url="https://github.com/$repo/releases/latest/download"
         else
           base_url="https://github.com/$repo/releases/download/$GH_ASSERT_VERSION"
         fi
 
-        binary="$RUNNER_TEMP/$asset"
+        # Windows runner の $RUNNER_TEMP はバックスラッシュ区切りなので bash 側で作る
+        dir="$(mktemp -d)"
+        binary="$dir/$asset"
         curl --fail --location --retry 3 "$base_url/$asset" --output "$binary"
-        curl --fail --location --retry 3 "$base_url/checksums.txt" --output "$RUNNER_TEMP/checksums.txt"
+        curl --fail --location --retry 3 "$base_url/checksums.txt" --output "$dir/checksums.txt"
         # checksums.txt は全アセット分を含むので、取得したバイナリの行だけを検証する。
-        # 該当行が無ければ grep も sha256sum も失敗するため、未検証のまま通過しない
-        (cd "$RUNNER_TEMP" && grep -E "  ${asset}$" checksums.txt | sha256sum -c -)
+        # 該当行が無ければ sha256sum が失敗するため、未検証のまま通過しない
+        (cd "$dir" && awk -v file="$asset" '$2 == file' checksums.txt | sha256sum -c -)
         chmod +x "$binary"
         if [[ -n "$GH_ASSERT_CONTRACT" ]]; then
           exec "$binary" "$GH_ASSERT_CONTRACT"
