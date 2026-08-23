@@ -4,10 +4,6 @@ inputs:
   contract:
     description: Path to the contract file.
     required: false
-  version:
-    description: Release tag to download, or latest.
-    required: false
-    default: latest
   workflow-inputs:
     description: JSON-encoded inputs context for a reusable workflow.
     required: false
@@ -18,10 +14,9 @@ runs:
       id: install
       shell: bash
       env:
-        GH_ASSERT_VERSION: ${{ inputs.version }}
+        GH_ASSERT_VERSION: v0.0.3
       run: |
         set -euo pipefail
-        : "${GH_ASSERT_VERSION:=latest}"
 
         repo="rin2yh/gh-assert"
 
@@ -38,11 +33,7 @@ runs:
         esac
         asset="gh-assert-${os}-${arch}${ext}"
 
-        if [[ "$GH_ASSERT_VERSION" == "latest" ]]; then
-          base_url="https://github.com/$repo/releases/latest/download"
-        else
-          base_url="https://github.com/$repo/releases/download/$GH_ASSERT_VERSION"
-        fi
+        base_url="https://github.com/$repo/releases/download/$GH_ASSERT_VERSION"
 
         # Windows runner の $RUNNER_TEMP はバックスラッシュ区切りなので bash 側で作る
         dir="$(mktemp -d)"
