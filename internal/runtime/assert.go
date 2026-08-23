@@ -56,7 +56,7 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 	}
 	if forwarded {
 		if os.Getenv(inputsJSON) == "" {
-			return nil, fmt.Errorf("%s: inputs must be passed with inputs: ${{ toJSON(inputs) }} (workflow-inputs is also accepted)", item.Path)
+			return nil, fmt.Errorf("%s: inputs must be passed with inputs: ${{ toJSON(inputs) }}", item.Path)
 		}
 		inputs, err := loadForwardedInputs()
 		if err != nil {

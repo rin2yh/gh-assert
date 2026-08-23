@@ -82,7 +82,7 @@ jobs:
 
 For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, the Action asserts the explicitly forwarded input values and the declared environment variables.
 
-GitHub does not automatically pass a reusable workflow's `inputs` context to a Composite Action, so `inputs: ${{ toJSON(inputs) }}` is required when the contract declares inputs. gh-assert fails instead of silently skipping runtime input assertions when it is omitted. Values are still hidden from diagnostics. The previous `workflow-inputs` name remains available as a compatibility alias.
+GitHub does not automatically pass a reusable workflow's `inputs` context to a Composite Action, so `inputs: ${{ toJSON(inputs) }}` is required when the contract declares inputs. gh-assert fails instead of silently skipping runtime input assertions when it is omitted. Values are still hidden from diagnostics.
 
 ## Composite Actions
 
