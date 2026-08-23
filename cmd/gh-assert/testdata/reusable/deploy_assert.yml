@@ -1,0 +1,11 @@
+env:
+  FLAG:
+    required: true
+    type:
+      boolean: {}
+inputs:
+  environment:
+    required: true
+    type:
+      string:
+        enum: [staging, production]
