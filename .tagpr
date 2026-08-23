@@ -4,6 +4,6 @@ release = true
 [tagpr]
 	vPrefix = true
 	releaseBranch = main
-	versionFile = -
+	versionFile = action.yml
 	# アセットのアップロードが終わるまでリリースを公開しない
 	release = draft
