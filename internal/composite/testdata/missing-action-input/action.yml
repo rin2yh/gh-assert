@@ -1,0 +1,5 @@
+name: Deploy
+inputs: {}
+runs:
+  using: composite
+  steps: []

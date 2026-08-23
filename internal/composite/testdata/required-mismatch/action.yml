@@ -1,0 +1,7 @@
+name: Deploy
+inputs:
+  environment:
+    required: true
+runs:
+  using: composite
+  steps: []

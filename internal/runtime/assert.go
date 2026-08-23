@@ -58,7 +58,22 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		if os.Getenv(inputsJSON) == "" {
 			return nil, fmt.Errorf("%s: reusable workflow inputs must be passed with workflow-inputs: ${{ toJSON(inputs) }}", item.Path)
 		}
-		inputs, err := loadWorkflowInputs()
+		inputs, err := loadForwardedInputs()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", item.Path, err)
+		}
+		return assert(item.Contract, environment{}, values(inputs)), nil
+	}
+
+	composite, err := isCompositeAction(item.Path)
+	if err != nil {
+		return nil, err
+	}
+	if composite {
+		if os.Getenv(inputsJSON) == "" {
+			return nil, fmt.Errorf("%s: Composite Action inputs must be passed with action-inputs: ${{ toJSON(inputs) }}", item.Path)
+		}
+		inputs, err := loadForwardedInputs()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}

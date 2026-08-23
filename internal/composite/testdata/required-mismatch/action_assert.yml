@@ -1,0 +1,5 @@
+inputs:
+  environment:
+    required: false
+    type:
+      string: {}
