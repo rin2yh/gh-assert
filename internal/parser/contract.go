@@ -26,31 +26,42 @@ func parseContract(path string, data []byte) (*model.Contract, error) {
 	if err := decoder.Decode(&parsed); err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-	setPositions(path, data, &parsed)
-	return &parsed, nil
-}
 
-func setPositions(path string, data []byte, parsed *model.Contract) {
 	var document yaml.Node
-	if yaml.Unmarshal(data, &document) != nil || len(document.Content) == 0 {
-		return
+	if err := yaml.Unmarshal(data, &document); err != nil || len(document.Content) == 0 {
+		return &parsed, nil
 	}
-	setSectionPositions(path, mappingValue(document.Content[0], "env"), parsed.Env)
-	setSectionPositions(path, mappingValue(document.Content[0], "inputs"), parsed.Inputs)
+	root := document.Content[0]
+	return &model.Contract{
+		Env:    rulesWithPositions(path, mappingValue(root, "env"), parsed.Env),
+		Inputs: rulesWithPositions(path, mappingValue(root, "inputs"), parsed.Inputs),
+	}, nil
 }
 
-func setSectionPositions(path string, section *yaml.Node, rules map[string]model.Rule) {
-	if section == nil {
-		return
+func rulesWithPositions(path string, section *yaml.Node, rules map[string]model.Rule) map[string]model.Rule {
+	if rules == nil {
+		return nil
 	}
+	result := make(map[string]model.Rule, len(rules))
+	for name, rule := range rules {
+		result[name] = rule
+	}
+	if section == nil {
+		return result
+	}
+
 	for i := 0; i+1 < len(section.Content); i += 2 {
 		name, node := section.Content[i].Value, section.Content[i+1]
-		rule := rules[name]
+		rule, ok := result[name]
+		if !ok {
+			continue
+		}
 		rule.Position = model.Position{Path: path, Line: node.Line, Column: node.Column}
 		if typeNode := mappingValue(node, "type"); typeNode != nil && len(typeNode.Content) >= 2 {
 			spec := typeNode.Content[1]
 			rule.TypePosition = model.Position{Path: path, Line: spec.Line, Column: spec.Column}
 		}
-		rules[name] = rule
+		result[name] = rule
 	}
+	return result
 }

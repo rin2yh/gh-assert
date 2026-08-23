@@ -1,6 +1,9 @@
 package parser
 
-import "testing"
+import (
+	"path/filepath"
+	"testing"
+)
 
 func TestParseWorkflowEventSyntaxes(t *testing.T) {
 	tests := []struct {
@@ -29,12 +32,20 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 }
 
 func TestParseWorkflowInputs(t *testing.T) {
-	workflow, err := parseWorkflow("workflow.yml", []byte("on:\n  workflow_call:\n    inputs:\n      environment:\n        required: true\n        type: string\n"))
+	path := filepath.Join("testdata", "workflow.yml")
+	workflow, err := (WorkflowParser{}).Parse(path)
 	if err != nil {
 		t.Fatal(err)
 	}
 	input := workflow.Events["workflow_call"].Inputs["environment"]
 	if !input.Required || input.Type != "string" {
 		t.Fatalf("unexpected input: %#v", input)
+	}
+}
+
+func TestWorkflowParserReturnsReadError(t *testing.T) {
+	_, err := (WorkflowParser{}).Parse(filepath.Join(t.TempDir(), "missing.yml"))
+	if err == nil {
+		t.Fatal("expected an error")
 	}
 }
