@@ -40,13 +40,27 @@ func TestParserReturnsReadError(t *testing.T) {
 	}
 }
 
-func TestParserDoesNotValidateRules(t *testing.T) {
-	parsed, err := NewParser("contract.yml").parse([]byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
+func TestContractLifecycle(t *testing.T) {
+	parsed, err := NewParser("contract.yml").parse([]byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '^token-'\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	rule := parsed.Env["TOKEN"]
 	if rule.Type.Kind != "" || rule.Type.String.Pattern != nil {
 		t.Fatalf("parser prepared a rule: %#v", rule)
+	}
+
+	if err := Validate("contract.yml", parsed); err != nil {
+		t.Fatal(err)
+	}
+	rule = parsed.Env["TOKEN"]
+	if rule.Type.Kind != "" || rule.Type.String.Pattern != nil {
+		t.Fatalf("validation prepared a rule: %#v", rule)
+	}
+
+	Compile(parsed)
+	rule = parsed.Env["TOKEN"]
+	if rule.Type.Kind != "string" || rule.Type.String.Pattern == nil {
+		t.Fatalf("compiler did not prepare a rule: %#v", rule)
 	}
 }
