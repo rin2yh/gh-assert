@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"regexp/syntax"
 	"slices"
 	"strings"
 
@@ -20,6 +21,7 @@ func LoadFile(path string) (*model.Contract, error) {
 	if err := Validate(path, parsed); err != nil {
 		return nil, err
 	}
+	Compile(parsed)
 	return parsed, nil
 }
 
@@ -65,6 +67,7 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 	return loaded, nil
 }
 
+// Validate checks a parsed contract without preparing it for runtime use.
 func Validate(path string, parsed *model.Contract) error {
 	if parsed.Env == nil && parsed.Inputs == nil {
 		return fmt.Errorf("%s: env or inputs is required", path)
@@ -82,30 +85,25 @@ func validateSection(section string, rules map[string]model.Rule) error {
 		if position.Path == "" {
 			position = rule.Position
 		}
-		if err := validateRule(section, name, &rule, position); err != nil {
+		if err := validateRule(section, name, rule, position); err != nil {
 			return err
 		}
-		rules[name] = rule
 	}
 	return nil
 }
 
-func validateRule(section, name string, rule *model.Rule, position model.Position) error {
+func validateRule(section, name string, rule model.Rule, position model.Position) error {
 	types := 0
 	if rule.Type.String != nil {
 		types++
-		rule.Type.Kind = "string"
 		if rule.Type.String.PatternText != "" {
-			pattern, err := regexp.Compile(rule.Type.String.PatternText)
-			if err != nil {
+			if _, err := syntax.Parse(rule.Type.String.PatternText, syntax.Perl); err != nil {
 				return fmt.Errorf("%s:%d:%d: invalid pattern: %w", position.Path, position.Line, position.Column, err)
 			}
-			rule.Type.String.Pattern = pattern
 		}
 	}
 	if rule.Type.Integer != nil {
 		types++
-		rule.Type.Kind = "integer"
 		integer := rule.Type.Integer
 		if integer.Min != nil && integer.Max != nil && *integer.Min > *integer.Max {
 			return fmt.Errorf("%s:%d:%d: min must not be greater than max", position.Path, position.Line, position.Column)
@@ -113,10 +111,29 @@ func validateRule(section, name string, rule *model.Rule, position model.Positio
 	}
 	if rule.Type.Boolean != nil {
 		types++
-		rule.Type.Kind = "boolean"
 	}
 	if types != 1 {
 		return fmt.Errorf("%s:%d:%d: %s.%s.type must specify exactly one type", position.Path, position.Line, position.Column, section, name)
 	}
 	return nil
+}
+
+// Compile prepares a validated contract for runtime use.
+func Compile(parsed *model.Contract) {
+	for _, rules := range []map[string]model.Rule{parsed.Env, parsed.Inputs} {
+		for name, rule := range rules {
+			switch {
+			case rule.Type.String != nil:
+				rule.Type.Kind = "string"
+				if rule.Type.String.PatternText != "" {
+					rule.Type.String.Pattern = regexp.MustCompile(rule.Type.String.PatternText)
+				}
+			case rule.Type.Integer != nil:
+				rule.Type.Kind = "integer"
+			case rule.Type.Boolean != nil:
+				rule.Type.Kind = "boolean"
+			}
+			rules[name] = rule
+		}
+	}
 }
