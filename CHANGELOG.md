@@ -1,5 +1,16 @@
 # Changelog
 
+## [v0.0.4](https://github.com/rin2yh/gh-assert/compare/v0.0.3...v0.0.4) - 2026-08-23
+
+- feat: validate reusable workflow inputs by @rin2yh in https://github.com/rin2yh/gh-assert/pull/9
+- test: 固定fixtureをtestdataへ移行する by @rin2yh in https://github.com/rin2yh/gh-assert/pull/14
+- refactor: move parsers into owning packages by @rin2yh in https://github.com/rin2yh/gh-assert/pull/15
+- refactor: move runtime assertions into runtime package by @rin2yh in https://github.com/rin2yh/gh-assert/pull/16
+- refactor: clarify runtime input sources by @rin2yh in https://github.com/rin2yh/gh-assert/pull/17
+- fix: align SHA-pinned Action with release binary by @rin2yh in https://github.com/rin2yh/gh-assert/pull/25
+- refactor: let Cobra handle runtime arguments by @rin2yh in https://github.com/rin2yh/gh-assert/pull/24
+- refactor: separate contract validation and compilation by @rin2yh in https://github.com/rin2yh/gh-assert/pull/23
+
 ## [v0.0.3](https://github.com/rin2yh/gh-assert/compare/v0.0.2...v0.0.3) - 2026-08-23
 
 - fix(release): reuse tagpr draft when publishing assets by @rin2yh in https://github.com/rin2yh/gh-assert/pull/10
