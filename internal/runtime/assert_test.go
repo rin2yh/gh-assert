@@ -1,4 +1,4 @@
-package assertion
+package runtime
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
-func TestValidateRequiredEnvironment(t *testing.T) {
+func TestAssertRequiredEnvironment(t *testing.T) {
 	c := loadContract(t, "runtime.yml")
 	tests := []struct {
 		name string
@@ -20,12 +20,12 @@ func TestValidateRequiredEnvironment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, Validate(c, tt.env, nil), tt.want)
+			assertViolationCount(t, assert(c, tt.env, nil), tt.want)
 		})
 	}
 }
 
-func TestValidateEnvironmentConstraints(t *testing.T) {
+func TestAssertEnvironmentConstraints(t *testing.T) {
 	c := loadContract(t, "runtime.yml")
 	tests := []struct {
 		name string
@@ -40,12 +40,12 @@ func TestValidateEnvironmentConstraints(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, Validate(c, tt.env, nil), tt.want)
+			assertViolationCount(t, assert(c, tt.env, nil), tt.want)
 		})
 	}
 }
 
-func TestValidateWorkflowInputs(t *testing.T) {
+func TestAssertWorkflowInputs(t *testing.T) {
 	c := loadContract(t, "inputs.yml")
 	tests := []struct {
 		name   string
@@ -62,16 +62,16 @@ func TestValidateWorkflowInputs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, Validate(c, nil, tt.inputs), tt.want)
+			assertViolationCount(t, assert(c, nil, tt.inputs), tt.want)
 		})
 	}
 }
 
-func TestValidateReportsScopeAndPosition(t *testing.T) {
+func TestAssertReportsScopeAndPosition(t *testing.T) {
 	c := loadContract(t, "inputs.yml")
-	violations := Validate(c, values(nil), values{"environment": "develop"})
+	violations := assert(c, values(nil), values{"environment": "develop"})
 
-	assertScopes(t, violations, ScopeInput)
+	assertScopes(t, violations, scopeInput)
 	if violations[0].Name != "environment" {
 		t.Errorf("violation name = %q, want environment", violations[0].Name)
 	}
@@ -80,18 +80,23 @@ func TestValidateReportsScopeAndPosition(t *testing.T) {
 	}
 }
 
-func TestValidateSeparatesEnvironmentAndInputs(t *testing.T) {
+func TestAssertSeparatesEnvironmentAndInputs(t *testing.T) {
 	c := loadContract(t, "combined.yml")
 
-	assertScopes(t, Validate(c, values{"NAME": "develop"}, values{"environment": "develop"}), ScopeEnv, ScopeInput)
+	assertScopes(t, assert(c, values{"NAME": "develop"}, values{"environment": "develop"}), scopeEnv, scopeInput)
 }
 
-func TestValidateRuntimeReadsProcessEnvironment(t *testing.T) {
+func TestAssertReadsProcessEnvironment(t *testing.T) {
 	t.Setenv("NAME", "staging")
 	t.Setenv("COUNT", "3")
 	t.Setenv("FLAG", "true")
 
-	assertViolationCount(t, ValidateRuntime(loadContract(t, "runtime.yml"), nil), 0)
+	c := loadContract(t, "runtime.yml")
+	violations, err := Assert(model.ContractFile{Path: "testdata/runtime.yml", Contract: c})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertViolationCount(t, violations, 0)
 }
 
 func loadContract(t *testing.T, name string) *model.Contract {

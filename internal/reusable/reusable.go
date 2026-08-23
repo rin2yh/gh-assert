@@ -26,43 +26,6 @@ func Validate(item model.ContractFile) error {
 	return compareInputs(path, call.Inputs, item.Contract.Inputs)
 }
 
-// RuntimeInputs selects the runtime input source without exposing reusable
-// workflow detection to the command layer.
-func RuntimeInputs(item model.ContractFile) (map[string]string, error) {
-	if len(item.Contract.Inputs) == 0 {
-		return nil, nil
-	}
-	name := github.EventName()
-	if name == github.WorkflowDispatch {
-		inputs, err := github.EventInputs()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", item.Path, err)
-		}
-		return inputs, nil
-	}
-
-	workflow, _, err := load(item.Path)
-	if err != nil {
-		return nil, err
-	}
-	if workflow != nil {
-		if _, ok := workflow.Events["workflow_call"]; ok {
-			if os.Getenv(github.InputsJSON) == "" {
-				return nil, fmt.Errorf("%s: reusable workflow inputs must be passed with workflow-inputs: ${{ toJSON(inputs) }}", item.Path)
-			}
-			inputs, err := github.WorkflowInputs()
-			if err != nil {
-				return nil, fmt.Errorf("%s: %w", item.Path, err)
-			}
-			return inputs, nil
-		}
-	}
-	if name == "" {
-		return nil, fmt.Errorf("%s: an inputs contract requires a %s run: GITHUB_EVENT_NAME is not set", item.Path, github.WorkflowDispatch)
-	}
-	return nil, fmt.Errorf("%s: an inputs contract requires a %s run, but the current event is %s", item.Path, github.WorkflowDispatch, name)
-}
-
 func load(contractPath string) (*github.Workflow, string, error) {
 	path, ok := workflowPath(contractPath)
 	if !ok {

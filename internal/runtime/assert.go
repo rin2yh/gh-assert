@@ -1,4 +1,4 @@
-package assertion
+package runtime
 
 import (
 	"maps"
@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	ScopeEnv   = "env"
-	ScopeInput = "input"
+	scopeEnv   = "env"
+	scopeInput = "input"
 )
 
 type section struct {
@@ -21,21 +21,21 @@ type section struct {
 }
 
 var (
-	envSection   = section{scope: ScopeEnv, subject: "environment variable"}
-	inputSection = section{scope: ScopeInput, subject: "input"}
+	envSection   = section{scope: scopeEnv, subject: "environment variable"}
+	inputSection = section{scope: scopeInput, subject: "input"}
 )
 
 type source interface {
-	Lookup(name string) (string, bool)
+	lookup(name string) (string, bool)
 }
 
 type values map[string]string
 
-func (v values) Lookup(name string) (string, bool) { value, ok := v[name]; return value, ok }
+func (v values) lookup(name string) (string, bool) { value, ok := v[name]; return value, ok }
 
-type osEnvironment struct{}
+type environment struct{}
 
-func (osEnvironment) Lookup(name string) (string, bool) { return os.LookupEnv(name) }
+func (environment) lookup(name string) (string, bool) { return os.LookupEnv(name) }
 
 type Violation struct {
 	Scope    string
@@ -44,20 +44,24 @@ type Violation struct {
 	Message  string
 }
 
-func ValidateRuntime(c *model.Contract, inputs map[string]string) []Violation {
-	return Validate(c, osEnvironment{}, values(inputs))
+func Assert(item model.ContractFile) ([]Violation, error) {
+	inputs, err := inputs(item)
+	if err != nil {
+		return nil, err
+	}
+	return assert(item.Contract, environment{}, values(inputs)), nil
 }
 
-func Validate(c *model.Contract, env, inputs source) []Violation {
-	out := validateSection(envSection, c.Env, env)
-	return append(out, validateSection(inputSection, c.Inputs, inputs)...)
+func assert(c *model.Contract, env, inputs source) []Violation {
+	out := assertSection(envSection, c.Env, env)
+	return append(out, assertSection(inputSection, c.Inputs, inputs)...)
 }
 
-func validateSection(section section, rules map[string]model.Rule, source source) []Violation {
+func assertSection(section section, rules map[string]model.Rule, source source) []Violation {
 	var out []Violation
 	for _, name := range slices.Sorted(maps.Keys(rules)) {
 		rule := rules[name]
-		value, present := source.Lookup(name)
+		value, present := source.lookup(name)
 		if !present {
 			if rule.Required {
 				out = append(out, Violation{section.scope, name, rule.Position, "required " + section.subject + " is not set"})
@@ -68,12 +72,12 @@ func validateSection(section section, rules map[string]model.Rule, source source
 			out = append(out, Violation{section.scope, name, rule.Position, "required " + section.subject + " is empty"})
 			continue
 		}
-		out = append(out, validateValue(section.scope, name, rule, value)...)
+		out = append(out, assertValue(section.scope, name, rule, value)...)
 	}
 	return out
 }
 
-func validateValue(scope, name string, rule model.Rule, value string) []Violation {
+func assertValue(scope, name string, rule model.Rule, value string) []Violation {
 	var out []Violation
 	switch rule.Type.Kind {
 	case "string":

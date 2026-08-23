@@ -6,10 +6,10 @@ import (
 	"io"
 	"os"
 
-	"github.com/rin2yh/gh-assert/internal/assertion"
 	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/diagnostic"
 	"github.com/rin2yh/gh-assert/internal/reusable"
+	"github.com/rin2yh/gh-assert/internal/runtime"
 	"github.com/spf13/cobra"
 )
 
@@ -125,11 +125,10 @@ func runRuntime(cmd *cobra.Command, args []string) error {
 		if err := reusable.Validate(item); err != nil {
 			return &commandError{code: 2, err: err}
 		}
-		inputs, err := reusable.RuntimeInputs(item)
+		violations, err := runtime.Assert(item)
 		if err != nil {
 			return &commandError{code: 2, err: err}
 		}
-		violations := assertion.ValidateRuntime(item.Contract, inputs)
 		if len(violations) > 0 {
 			if err := diagnostic.WriteViolations(cmd.ErrOrStderr(), violations); err != nil {
 				return &commandError{code: 2, err: err}
