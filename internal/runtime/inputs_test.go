@@ -1,4 +1,4 @@
-package github
+package runtime
 
 import (
 	"path/filepath"
@@ -8,14 +8,7 @@ import (
 	"github.com/rin2yh/gh-assert/internal/test"
 )
 
-func TestName(t *testing.T) {
-	t.Setenv("GITHUB_EVENT_NAME", WorkflowDispatch)
-	if got := EventName(); got != WorkflowDispatch {
-		t.Fatalf("got %q, want %q", got, WorkflowDispatch)
-	}
-}
-
-func TestInputsReadsEventPayload(t *testing.T) {
+func TestEventInputsReadsEventPayload(t *testing.T) {
 	tests := []struct {
 		name string
 		file string
@@ -36,7 +29,7 @@ func TestInputsReadsEventPayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", filepath.Join("testdata", tt.file))
 
-			inputs, err := EventInputs()
+			inputs, err := eventInputs()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -48,9 +41,9 @@ func TestInputsReadsEventPayload(t *testing.T) {
 }
 
 func TestWorkflowInputsReadsInputsContext(t *testing.T) {
-	t.Setenv(InputsJSON, `{"environment":"staging","retries":3,"dry-run":true,"note":null}`)
+	t.Setenv(inputsJSON, `{"environment":"staging","retries":3,"dry-run":true,"note":null}`)
 
-	inputs, err := WorkflowInputs()
+	inputs, err := workflowInputs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,15 +61,15 @@ func TestWorkflowInputsRejectsInvalidContext(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(InputsJSON, tt.inputs)
+			t.Setenv(inputsJSON, tt.inputs)
 
-			_, err := WorkflowInputs()
+			_, err := workflowInputs()
 			test.AssertError(t, err)
 		})
 	}
 }
 
-func TestInputsRejectsInvalidPayload(t *testing.T) {
+func TestEventInputsRejectsInvalidPayload(t *testing.T) {
 	tests := []struct{ name, file string }{
 		{name: "invalid json", file: "invalid.json"},
 		{name: "non scalar input", file: "non-scalar-input.json"},
@@ -85,13 +78,13 @@ func TestInputsRejectsInvalidPayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", filepath.Join("testdata", tt.file))
 
-			_, err := EventInputs()
+			_, err := eventInputs()
 			test.AssertError(t, err)
 		})
 	}
 }
 
-func TestInputsRejectsUnavailablePayload(t *testing.T) {
+func TestEventInputsRejectsUnavailablePayload(t *testing.T) {
 	tests := []struct{ name, path string }{
 		{name: "no event path", path: ""},
 		{name: "missing file", path: "testdata/absent.json"},
@@ -100,7 +93,7 @@ func TestInputsRejectsUnavailablePayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", tt.path)
 
-			_, err := EventInputs()
+			_, err := eventInputs()
 			test.AssertError(t, err)
 		})
 	}
