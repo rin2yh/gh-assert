@@ -1,0 +1,8 @@
+inputs:
+  environment:
+    required: true
+    type:
+      string: {}
+  retries:
+    type:
+      integer: {}
