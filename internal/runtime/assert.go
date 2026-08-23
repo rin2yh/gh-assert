@@ -60,11 +60,10 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		}
 		forwarded = reusable
 	}
-	events := []string{event}
+	effective := item.Contract.Effective(event)
 	if reusable {
-		events = []string{"workflow_call", event}
+		effective.Inputs = item.Contract.Effective("workflow_call").Inputs
 	}
-	effective := item.Contract.Effective(events...)
 	if len(effective.Inputs) == 0 {
 		return assert(effective, environment{}, values(nil)), nil
 	}

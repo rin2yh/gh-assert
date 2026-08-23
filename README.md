@@ -109,7 +109,7 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
 ```
 
-For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, the Action asserts the explicitly forwarded input values and the declared environment variables.
+For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, inputs use the common rules plus `on.workflow_call.inputs`, while env uses the common rules plus `on.<GITHUB_EVENT_NAME>.env`.
 
 GitHub does not automatically pass a reusable workflow's `inputs` context to a Composite Action, so `inputs: ${{ toJSON(inputs) }}` is required when the contract declares inputs. gh-assert fails instead of silently skipping runtime input assertions when it is omitted. Values are still hidden from diagnostics.
 

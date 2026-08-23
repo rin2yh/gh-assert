@@ -11,3 +11,15 @@ on:
         type:
           string:
             enum: [staging, production]
+  push:
+    env:
+      PUSH_ONLY:
+        required: true
+        type:
+          boolean: {}
+    inputs:
+      environment:
+        required: true
+        type:
+          string:
+            enum: [develop]

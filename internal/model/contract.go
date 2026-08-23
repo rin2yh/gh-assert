@@ -16,21 +16,19 @@ type EventContract struct {
 	Inputs map[string]Rule `yaml:"inputs"`
 }
 
-// Effective returns the common rules combined with the rules for each event.
+// Effective returns the common rules combined with the rules for event.
 // Event-specific rules replace common rules with the same name.
-func (c *Contract) Effective(events ...string) *Contract {
+func (c *Contract) Effective(event string) *Contract {
 	effective := &Contract{
 		Env:    maps.Clone(c.Env),
 		Inputs: maps.Clone(c.Inputs),
 	}
-	for _, event := range events {
-		scoped, ok := c.On[event]
-		if !ok {
-			continue
-		}
-		effective.Env = mergeRules(effective.Env, scoped.Env)
-		effective.Inputs = mergeRules(effective.Inputs, scoped.Inputs)
+	scoped, ok := c.On[event]
+	if !ok {
+		return effective
 	}
+	effective.Env = mergeRules(effective.Env, scoped.Env)
+	effective.Inputs = mergeRules(effective.Inputs, scoped.Inputs)
 	return effective
 }
 

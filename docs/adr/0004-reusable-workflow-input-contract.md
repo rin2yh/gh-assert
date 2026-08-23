@@ -8,9 +8,9 @@ input名、`required`、`type`はWorkflow YAMLとcontractを比較できる。�
 
 ## Decision
 
-`<name>_assert.yml`と同じ場所にある`<name>.yml`が`workflow_call`を宣言している場合、gh-assertは`workflow_call.inputs`とcontractの`inputs`を静的に比較する。比較するのはinput名、`required`、`type`である。contractの`integer`はGitHub Actionsの`number`に対応させる。
+`<name>_assert.yml`と同じ場所にある`<name>.yml`が`workflow_call`を宣言している場合、gh-assertは`workflow_call.inputs`とcontractの共通`inputs`および`on.workflow_call.inputs`を静的に比較する。比較するのはinput名、`required`、`type`である。contractの`integer`はGitHub Actionsの`number`に対応させる。
 
-runtime assertionでは、Reusable Workflow内からActionの`inputs`へ`${{ toJSON(inputs) }}`を渡す。Actionはこの値を`GH_ASSERT_INPUTS`としてCLIへ渡し、値のtypeと制約を検証する。Reusable Workflowのinput contractがあるのに値が渡されなかった場合は、検証をskipせずエラーにする。
+runtime assertionでは、Reusable Workflow内からActionの`inputs`へ`${{ toJSON(inputs) }}`を渡す。Actionはこの値を`GH_ASSERT_INPUTS`としてCLIへ渡し、共通`inputs`および`on.workflow_call.inputs`のtypeと制約を検証する。envには共通`env`および`on.<GITHUB_EVENT_NAME>.env`を適用する。Reusable Workflowのinput contractがあるのに値が渡されなかった場合は、検証をskipせずエラーにする。
 
 `toJSON`はWorkflow側で実行する。`inputs`はWorkflow内ではobjectだが、Action metadataのinputにはobject型がなく、そのままActionへ渡してAction側でJSON化できないためである。JSON化より後のparse、scalarへの変換、assertionはgh-assertが担当する。
 

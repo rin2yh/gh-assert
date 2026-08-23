@@ -131,16 +131,29 @@ func TestRuntimeAppliesEventSpecificInputs(t *testing.T) {
 	assertContains(t, stderr, "input deploy_type", true)
 }
 
-func TestRuntimeAssertsReusableWorkflowInputValues(t *testing.T) {
+func TestRuntimeReusableWorkflowUsesWorkflowCallInputRules(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_NAME", "push")
 	t.Setenv("GITHUB_EVENT_PATH", "")
 	t.Setenv("FLAG", "true")
+	t.Setenv("PUSH_ONLY", "true")
 	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"develop"}`)
 
 	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 1)
 
 	assertContains(t, stderr, "allowed enum", true)
 	assertContains(t, stderr, "develop", false)
+}
+
+func TestRuntimeReusableWorkflowUsesCallerEventEnvRules(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "push")
+	t.Setenv("GITHUB_EVENT_PATH", "")
+	t.Setenv("FLAG", "true")
+	t.Setenv("PUSH_ONLY", "invalid")
+	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"staging"}`)
+
+	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 1)
+
+	assertContains(t, stderr, "env PUSH_ONLY", true)
 }
 
 func TestRuntimeReusableWorkflowRequiresInputValues(t *testing.T) {
