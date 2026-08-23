@@ -1,6 +1,7 @@
 package github
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -16,24 +17,24 @@ func TestName(t *testing.T) {
 
 func TestInputsReadsEventPayload(t *testing.T) {
 	tests := []struct {
-		name    string
-		payload string
-		want    map[string]string
+		name string
+		file string
+		want map[string]string
 	}{
 		{
-			name:    "scalar values",
-			payload: `{"inputs":{"environment":"staging","retries":3,"dry-run":true,"note":null}}`,
-			want:    map[string]string{"environment": "staging", "retries": "3", "dry-run": "true", "note": ""},
+			name: "scalar values",
+			file: "scalar-inputs.json",
+			want: map[string]string{"environment": "staging", "retries": "3", "dry-run": "true", "note": ""},
 		},
 		{
-			name:    "no inputs key",
-			payload: `{"ref":"refs/heads/main"}`,
-			want:    map[string]string{},
+			name: "no inputs key",
+			file: "no-inputs.json",
+			want: map[string]string{},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
+			t.Setenv("GITHUB_EVENT_PATH", filepath.Join("testdata", tt.file))
 
 			inputs, err := EventInputs()
 			if err != nil {
@@ -76,13 +77,13 @@ func TestWorkflowInputsRejectsInvalidContext(t *testing.T) {
 }
 
 func TestInputsRejectsInvalidPayload(t *testing.T) {
-	tests := []struct{ name, payload string }{
-		{name: "invalid json", payload: "{"},
-		{name: "non scalar input", payload: `{"inputs":{"matrix":["a"]}}`},
+	tests := []struct{ name, file string }{
+		{name: "invalid json", file: "invalid.json"},
+		{name: "non scalar input", file: "non-scalar-input.json"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("GITHUB_EVENT_PATH", writeEvent(t, tt.payload))
+			t.Setenv("GITHUB_EVENT_PATH", filepath.Join("testdata", tt.file))
 
 			_, err := EventInputs()
 			test.AssertError(t, err)
@@ -103,9 +104,4 @@ func TestInputsRejectsUnavailablePayload(t *testing.T) {
 			test.AssertError(t, err)
 		})
 	}
-}
-
-func writeEvent(t *testing.T, payload string) string {
-	t.Helper()
-	return test.WriteFile(t, t.TempDir(), "event.json", payload)
 }
