@@ -50,15 +50,6 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		return assert(item.Contract, environment{}, values(nil)), nil
 	}
 
-	event := os.Getenv("GITHUB_EVENT_NAME")
-	if event == workflowDispatch {
-		inputs, err := loadEventInputs()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", item.Path, err)
-		}
-		return assert(item.Contract, environment{}, values(inputs)), nil
-	}
-
 	reusable, err := isReusableWorkflow(item.Path)
 	if err != nil {
 		return nil, err
@@ -68,6 +59,15 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 			return nil, fmt.Errorf("%s: reusable workflow inputs must be passed with workflow-inputs: ${{ toJSON(inputs) }}", item.Path)
 		}
 		inputs, err := loadWorkflowInputs()
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", item.Path, err)
+		}
+		return assert(item.Contract, environment{}, values(inputs)), nil
+	}
+
+	event := os.Getenv("GITHUB_EVENT_NAME")
+	if event == workflowDispatch {
+		inputs, err := loadEventInputs()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
