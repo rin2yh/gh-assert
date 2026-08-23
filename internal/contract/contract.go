@@ -1,7 +1,6 @@
 package contract
 
 import (
-	"bytes"
 	"fmt"
 	"maps"
 	"os"
@@ -10,68 +9,32 @@ import (
 	"slices"
 	"strings"
 
-	"gopkg.in/yaml.v3"
+	"github.com/rin2yh/gh-assert/internal/model"
+	"github.com/rin2yh/gh-assert/internal/parser"
 )
 
-type Position struct {
-	Path   string
-	Line   int
-	Column int
-}
-
-type Contract struct {
-	Env    map[string]Rule `yaml:"env"`
-	Inputs map[string]Rule `yaml:"inputs"`
-}
-
-type Rule struct {
-	Required bool     `yaml:"required,omitempty"`
-	Type     Type     `yaml:"type"`
-	Position Position `yaml:"-"`
-}
-
-type Type struct {
-	String  *StringType  `yaml:"string,omitempty"`
-	Integer *IntegerType `yaml:"integer,omitempty"`
-	Boolean *struct{}    `yaml:"boolean,omitempty"`
-	Kind    string       `yaml:"-"`
-}
-
-type StringType struct {
-	Enum        []string       `yaml:"enum,omitempty"`
-	PatternText string         `yaml:"pattern,omitempty"`
-	Pattern     *regexp.Regexp `yaml:"-"`
-}
-
-type IntegerType struct {
-	Min *int64 `yaml:"min,omitempty"`
-	Max *int64 `yaml:"max,omitempty"`
-}
-
-type Loaded struct {
-	Path     string
-	Contract *Contract
-}
-
-func LoadFile(path string) (*Contract, error) {
-	data, err := os.ReadFile(path)
+func LoadFile(path string) (*model.Contract, error) {
+	parsed, err := parser.NewContractParser(path).Parse()
 	if err != nil {
 		return nil, err
 	}
-	return parse(path, data)
+	if err := Validate(path, parsed); err != nil {
+		return nil, err
+	}
+	return parsed, nil
 }
 
-func LoadTargets(path string) ([]Loaded, error) {
+func LoadTargets(path string) ([]model.ContractFile, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 	if !info.IsDir() {
-		c, err := LoadFile(path)
+		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		return []Loaded{{Path: path, Contract: c}}, nil
+		return []model.ContractFile{{Path: path, Contract: parsed}}, nil
 	}
 
 	var paths []string
@@ -92,47 +55,35 @@ func LoadTargets(path string) ([]Loaded, error) {
 		return nil, fmt.Errorf("no contract files matching *_assert.yml found in %s", path)
 	}
 
-	loaded := make([]Loaded, 0, len(paths))
+	loaded := make([]model.ContractFile, 0, len(paths))
 	for _, path := range paths {
-		c, err := LoadFile(path)
+		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		loaded = append(loaded, Loaded{Path: path, Contract: c})
+		loaded = append(loaded, model.ContractFile{Path: path, Contract: parsed})
 	}
 	return loaded, nil
 }
 
-func parse(path string, data []byte) (*Contract, error) {
-	var c Contract
-	decoder := yaml.NewDecoder(bytes.NewReader(data))
-	decoder.KnownFields(true)
-	if err := decoder.Decode(&c); err != nil {
-		return nil, fmt.Errorf("%s: %w", path, err)
+func Validate(path string, parsed *model.Contract) error {
+	if parsed.Env == nil && parsed.Inputs == nil {
+		return fmt.Errorf("%s: env or inputs is required", path)
 	}
-	if c.Env == nil && c.Inputs == nil {
-		return nil, fmt.Errorf("%s: env or inputs is required", path)
+	if err := validateSection("env", parsed.Env); err != nil {
+		return err
 	}
-
-	positions := readPositions(path, data)
-	if err := prepareSection("env", c.Env, positions.env); err != nil {
-		return nil, err
-	}
-	if err := prepareSection("inputs", c.Inputs, positions.inputs); err != nil {
-		return nil, err
-	}
-	return &c, nil
+	return validateSection("inputs", parsed.Inputs)
 }
 
-func prepareSection(section string, rules map[string]Rule, positions sectionPositions) error {
+func validateSection(section string, rules map[string]model.Rule) error {
 	for _, name := range slices.Sorted(maps.Keys(rules)) {
 		rule := rules[name]
-		rule.Position = positions.rules[name]
-		typePosition := positions.types[name]
-		if typePosition.Path == "" {
-			typePosition = rule.Position
+		position := rule.TypePosition
+		if position.Path == "" {
+			position = rule.Position
 		}
-		if err := prepareRule(section, name, &rule, typePosition); err != nil {
+		if err := validateRule(section, name, &rule, position); err != nil {
 			return err
 		}
 		rules[name] = rule
@@ -140,7 +91,7 @@ func prepareSection(section string, rules map[string]Rule, positions sectionPosi
 	return nil
 }
 
-func prepareRule(section, name string, rule *Rule, typePosition Position) error {
+func validateRule(section, name string, rule *model.Rule, position model.Position) error {
 	types := 0
 	if rule.Type.String != nil {
 		types++
@@ -148,7 +99,7 @@ func prepareRule(section, name string, rule *Rule, typePosition Position) error 
 		if rule.Type.String.PatternText != "" {
 			pattern, err := regexp.Compile(rule.Type.String.PatternText)
 			if err != nil {
-				return fmt.Errorf("%s:%d:%d: invalid pattern: %w", typePosition.Path, typePosition.Line, typePosition.Column, err)
+				return fmt.Errorf("%s:%d:%d: invalid pattern: %w", position.Path, position.Line, position.Column, err)
 			}
 			rule.Type.String.Pattern = pattern
 		}
@@ -158,7 +109,7 @@ func prepareRule(section, name string, rule *Rule, typePosition Position) error 
 		rule.Type.Kind = "integer"
 		integer := rule.Type.Integer
 		if integer.Min != nil && integer.Max != nil && *integer.Min > *integer.Max {
-			return fmt.Errorf("%s:%d:%d: min must not be greater than max", typePosition.Path, typePosition.Line, typePosition.Column)
+			return fmt.Errorf("%s:%d:%d: min must not be greater than max", position.Path, position.Line, position.Column)
 		}
 	}
 	if rule.Type.Boolean != nil {
@@ -166,61 +117,7 @@ func prepareRule(section, name string, rule *Rule, typePosition Position) error 
 		rule.Type.Kind = "boolean"
 	}
 	if types != 1 {
-		return fmt.Errorf("%s:%d:%d: %s.%s.type must specify exactly one type", typePosition.Path, typePosition.Line, typePosition.Column, section, name)
-	}
-	return nil
-}
-
-type sectionPositions struct {
-	rules map[string]Position
-	types map[string]Position
-}
-
-type positionIndex struct {
-	env    sectionPositions
-	inputs sectionPositions
-}
-
-func readPositions(path string, data []byte) positionIndex {
-	var doc yaml.Node
-	if yaml.Unmarshal(data, &doc) != nil || len(doc.Content) == 0 {
-		return positionIndex{}
-	}
-	return positionIndex{
-		env:    readSectionPositions(path, doc.Content[0], "env"),
-		inputs: readSectionPositions(path, doc.Content[0], "inputs"),
-	}
-}
-
-func readSectionPositions(path string, doc *yaml.Node, section string) sectionPositions {
-	positions := sectionPositions{rules: map[string]Position{}, types: map[string]Position{}}
-	node := mappingValue(doc, section)
-	if node == nil {
-		return positions
-	}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		name, rule := node.Content[i].Value, node.Content[i+1]
-		positions.rules[name] = Position{Path: path, Line: rule.Line, Column: rule.Column}
-		typeNode := mappingValue(rule, "type")
-		if typeNode != nil && len(typeNode.Content) >= 2 {
-			spec := typeNode.Content[1]
-			positions.types[name] = Position{Path: path, Line: spec.Line, Column: spec.Column}
-		}
-	}
-	return positions
-}
-
-func mappingValue(node *yaml.Node, key string) *yaml.Node {
-	if node.Kind == yaml.DocumentNode && len(node.Content) > 0 {
-		node = node.Content[0]
-	}
-	if node.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		if node.Content[i].Value == key {
-			return node.Content[i+1]
-		}
+		return fmt.Errorf("%s:%d:%d: %s.%s.type must specify exactly one type", position.Path, position.Line, position.Column, section, name)
 	}
 	return nil
 }

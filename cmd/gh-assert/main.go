@@ -9,7 +9,7 @@ import (
 	"github.com/rin2yh/gh-assert/internal/assertion"
 	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/diagnostic"
-	"github.com/rin2yh/gh-assert/internal/event"
+	"github.com/rin2yh/gh-assert/internal/reusable"
 	"github.com/spf13/cobra"
 )
 
@@ -94,6 +94,9 @@ func newValidateCommand(stdout io.Writer) *cobra.Command {
 				return &commandError{code: 2, err: err}
 			}
 			for _, item := range loaded {
+				if err := reusable.Validate(item); err != nil {
+					return &commandError{code: 2, err: err}
+				}
 				if _, err := fmt.Fprintf(stdout, "%s: contract is valid\n", item.Path); err != nil {
 					return err
 				}
@@ -117,12 +120,15 @@ func runRuntime(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return &commandError{code: 2, err: err}
 	}
-	inputs, err := runtimeInputs(loaded)
-	if err != nil {
-		return &commandError{code: 2, err: err}
-	}
 	failed := false
 	for _, item := range loaded {
+		if err := reusable.Validate(item); err != nil {
+			return &commandError{code: 2, err: err}
+		}
+		inputs, err := reusable.RuntimeInputs(item)
+		if err != nil {
+			return &commandError{code: 2, err: err}
+		}
 		violations := assertion.ValidateRuntime(item.Contract, inputs)
 		if len(violations) > 0 {
 			if err := diagnostic.WriteViolations(cmd.ErrOrStderr(), violations); err != nil {
@@ -135,24 +141,4 @@ func runRuntime(cmd *cobra.Command, args []string) error {
 		return &commandError{code: 1, err: errors.New("contract assertion failed")}
 	}
 	return nil
-}
-
-func runtimeInputs(loaded []contract.Loaded) (map[string]string, error) {
-	for _, item := range loaded {
-		if len(item.Contract.Inputs) == 0 {
-			continue
-		}
-		switch name := event.Name(); {
-		case name == "":
-			return nil, fmt.Errorf("%s: an inputs contract requires a %s run: GITHUB_EVENT_NAME is not set", item.Path, event.Dispatch)
-		case name != event.Dispatch:
-			return nil, fmt.Errorf("%s: an inputs contract requires a %s run, but the current event is %s", item.Path, event.Dispatch, name)
-		}
-		inputs, err := event.Inputs()
-		if err != nil {
-			return nil, fmt.Errorf("%s: %w", item.Path, err)
-		}
-		return inputs, nil
-	}
-	return nil, nil
 }

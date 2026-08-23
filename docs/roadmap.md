@@ -39,13 +39,14 @@ Workflowが受け取るinputsをcontractの対象に追加する。
 * required / type / value constraints
 * runtime assertion
 
-## v0.0.3 — Reusable Workflows
+## v0.0.4 — Reusable Workflows
 
 Reusable Workflowをcontractの対象に追加する。
 
 * `workflow_call.inputs`
 * reusable workflowの公開interfaceに対するcontract
-* runtime assertion
+* input名 / required / typeの静的検証
+* runtime input / env assertion
 
 ## v0.1.0 — Composite Actions
 
@@ -64,6 +65,9 @@ Reusable Workflowをcontractの対象に追加する。
 ## Future
 
 * GitHub annotation
+* `gh assert init`
+  * contractを対象にgh-assertのstepを生成・更新する
+  * Reusable Workflowでは`workflow-inputs: ${{ toJSON(inputs) }}`を自動で追加する
 
 ## Non-goals
 

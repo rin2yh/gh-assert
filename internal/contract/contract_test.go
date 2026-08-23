@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/rin2yh/gh-assert/internal/model"
 	"github.com/rin2yh/gh-assert/internal/test"
 )
 
@@ -59,14 +60,15 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 	tests := []struct {
 		name    string
 		content string
-		rules   func(*Contract) map[string]Rule
+		rules   func(*model.Contract) map[string]model.Rule
 	}{
-		{name: "env only", content: "env: {}\n", rules: func(c *Contract) map[string]Rule { return c.Env }},
-		{name: "inputs only", content: "inputs: {}\n", rules: func(c *Contract) map[string]Rule { return c.Inputs }},
+		{name: "env only", content: "env: {}\n", rules: func(c *model.Contract) map[string]model.Rule { return c.Env }},
+		{name: "inputs only", content: "inputs: {}\n", rules: func(c *model.Contract) map[string]model.Rule { return c.Inputs }},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c, err := parse("contract.yml", []byte(tt.content))
+			path := test.WriteFile(t, t.TempDir(), "contract.yml", tt.content)
+			c, err := LoadFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -95,14 +97,10 @@ func TestLoadTargetsRejectsEmptyDirectory(t *testing.T) {
 	test.AssertError(t, err)
 }
 
-func parseFile(t *testing.T, name string) (*Contract, error) {
+func parseFile(t *testing.T, name string) (*model.Contract, error) {
 	t.Helper()
 	path := filepath.Join("testdata", name+".yml")
-	data, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return parse(path, data)
+	return LoadFile(path)
 }
 
 func assertParseFails(t *testing.T, name string) string {
@@ -112,7 +110,7 @@ func assertParseFails(t *testing.T, name string) string {
 	return err.Error()
 }
 
-func ruleNames(rules map[string]Rule) string {
+func ruleNames(rules map[string]model.Rule) string {
 	return strings.Join(slices.Sorted(maps.Keys(rules)), ",")
 }
 

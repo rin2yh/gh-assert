@@ -8,6 +8,9 @@ inputs:
     description: Release tag to download, or latest.
     required: false
     default: latest
+  workflow-inputs:
+    description: JSON-encoded inputs context for a reusable workflow.
+    required: false
 runs:
   using: composite
   steps:
@@ -56,6 +59,7 @@ runs:
       env:
         GH_ASSERT_BINARY: ${{ steps.install.outputs.binary }}
         GH_ASSERT_CONTRACT: ${{ inputs.contract }}
+        GH_ASSERT_INPUTS: ${{ inputs.workflow-inputs }}
       run: |
         set -euo pipefail
         if [[ -n "$GH_ASSERT_CONTRACT" ]]; then
