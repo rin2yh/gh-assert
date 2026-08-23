@@ -2,7 +2,7 @@ module github.com/rin2yh/gh-assert
 
 go 1.26
 
-require gopkg.in/yaml.v3 v3.0.1
+require go.yaml.in/yaml/v4 v4.0.0-rc.3
 
 require (
 	github.com/google/go-cmp v0.7.0

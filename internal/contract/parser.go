@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/rin2yh/gh-assert/internal/model"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 type Parser struct {
