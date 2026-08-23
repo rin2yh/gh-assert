@@ -31,8 +31,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # GITHUB_TOKEN で作成したタグは push イベントを発火しないため、
-  # タグ push をトリガーにせずタグを作った実行の中でリリースを公開する。
   release:
     name: release
     needs: tagpr
