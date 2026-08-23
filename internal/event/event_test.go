@@ -46,6 +46,35 @@ func TestInputsReadsEventPayload(t *testing.T) {
 	}
 }
 
+func TestWorkflowInputsReadsInputsContext(t *testing.T) {
+	t.Setenv(InputsJSON, `{"environment":"staging","retries":3,"dry-run":true,"note":null}`)
+
+	inputs, err := WorkflowInputs()
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{"environment": "staging", "retries": "3", "dry-run": "true", "note": ""}
+	if diff := cmp.Diff(want, inputs); diff != "" {
+		t.Fatalf("inputs mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestWorkflowInputsRejectsInvalidContext(t *testing.T) {
+	tests := []struct{ name, inputs string }{
+		{name: "invalid json", inputs: "{"},
+		{name: "not an object", inputs: `[]`},
+		{name: "non scalar input", inputs: `{"matrix":["a"]}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(InputsJSON, tt.inputs)
+
+			_, err := WorkflowInputs()
+			test.AssertError(t, err)
+		})
+	}
+}
+
 func TestInputsRejectsInvalidPayload(t *testing.T) {
 	tests := []struct{ name, payload string }{
 		{name: "invalid json", payload: "{"},

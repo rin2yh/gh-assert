@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 )
 
 const Dispatch = "workflow_dispatch"
+
+const InputsJSON = "GH_ASSERT_INPUTS"
 
 func Name() string { return os.Getenv("GITHUB_EVENT_NAME") }
 
@@ -29,17 +32,45 @@ func Inputs() (map[string]string, error) {
 	return inputs, nil
 }
 
+func WorkflowInputs() (map[string]string, error) {
+	var inputs map[string]any
+	if err := decode([]byte(os.Getenv(InputsJSON)), &inputs); err != nil {
+		return nil, fmt.Errorf("%s: inputs context is not valid JSON: %w", InputsJSON, err)
+	}
+	if inputs == nil {
+		return nil, fmt.Errorf("%s: inputs context must be a JSON object", InputsJSON)
+	}
+	return stringify(inputs)
+}
+
 func parseInputs(data []byte) (map[string]string, error) {
 	var payload struct {
 		Inputs map[string]any `json:"inputs"`
 	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	if err := decoder.Decode(&payload); err != nil {
+	if err := decode(data, &payload); err != nil {
 		return nil, fmt.Errorf("event payload is not valid JSON: %w", err)
 	}
-	inputs := make(map[string]string, len(payload.Inputs))
-	for name, value := range payload.Inputs {
+	return stringify(payload.Inputs)
+}
+
+func decode(data []byte, value any) error {
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(value); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return errors.New("multiple JSON values")
+		}
+		return err
+	}
+	return nil
+}
+
+func stringify(values map[string]any) (map[string]string, error) {
+	inputs := make(map[string]string, len(values))
+	for name, value := range values {
 		text, ok := scalar(value)
 		if !ok {
 			return nil, fmt.Errorf("input %s is not a scalar value", name)
