@@ -21,6 +21,18 @@ func TestValidateReusableInterface(t *testing.T) {
 	}
 }
 
+func TestValidateReusableInterfaceUsesWorkflowCallRules(t *testing.T) {
+	contractPath := fixtureContractPath("event-specific")
+	c, err := contract.LoadFile(contractPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestValidateReusableInterfaceRejectsMismatch(t *testing.T) {
 	tests := []struct {
 		name string

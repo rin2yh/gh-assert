@@ -37,7 +37,36 @@ inputs:
         max: 5
 ```
 
-A contract declares `env`, `inputs`, or both. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
+A contract declares `env`, `inputs`, or event-specific additions under `on.<event>`. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
+
+One workflow still uses one contract when different events need different assertions. Top-level rules are common to every event, and the rules for the current `GITHUB_EVENT_NAME` are added at runtime:
+
+```yaml
+env:
+  CLOUDFLARE_API_TOKEN:
+    required: true
+    type:
+      string: {}
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        required: true
+        type:
+          string:
+            enum: [web, cron, database]
+
+  workflow_run:
+    env:
+      CONCLUSION:
+        required: true
+        type:
+          string:
+            enum: [success]
+```
+
+For `workflow_dispatch`, this example asserts `CLOUDFLARE_API_TOKEN` and `deploy_type`; for `workflow_run`, it asserts `CLOUDFLARE_API_TOKEN` and `CONCLUSION`. An event-specific rule replaces a top-level rule with the same name. Events without a matching `on` section use only the top-level rules.
 
 ## Runtime assertion
 
@@ -128,7 +157,7 @@ To validate one contract, pass its path as a positional argument.
 gh-assert validate .github/workflows/deploy_assert.yml
 ```
 
-Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. For Reusable Workflows, it also checks that `workflow_call.inputs` matches the sibling contract's input names, `required` settings and types. For Composite Actions, it checks that the sibling `action.yml` matches the contract's input names and `required` settings. It does not execute a workflow or Action.
+Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges, including rules under `on.<event>`. For Reusable Workflows, it also checks that `workflow_call.inputs` matches the effective `workflow_call` contract—the common inputs plus `on.workflow_call.inputs`. For Composite Actions, it checks that the sibling `action.yml` matches the contract's input names and `required` settings. It does not execute a workflow or Action.
 
 Runtime assertion follows the same path rule:
 

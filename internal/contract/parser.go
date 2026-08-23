@@ -38,10 +38,22 @@ func (p *Parser) parse(data []byte) (*model.Contract, error) {
 		return &parsed, nil
 	}
 	root := document.Content[0]
-	return &model.Contract{
+	result := &model.Contract{
 		Env:    p.rulesWithPositions(mappingValue(root, "env"), parsed.Env),
 		Inputs: p.rulesWithPositions(mappingValue(root, "inputs"), parsed.Inputs),
-	}, nil
+	}
+	if parsed.On != nil {
+		result.On = make(map[string]model.EventContract, len(parsed.On))
+		on := mappingValue(root, "on")
+		for name, event := range parsed.On {
+			node := mappingValue(on, name)
+			result.On[name] = model.EventContract{
+				Env:    p.rulesWithPositions(mappingValue(node, "env"), event.Env),
+				Inputs: p.rulesWithPositions(mappingValue(node, "inputs"), event.Inputs),
+			}
+		}
+	}
+	return result, nil
 }
 
 func (p *Parser) rulesWithPositions(section *yaml.Node, rules map[string]model.Rule) map[string]model.Rule {

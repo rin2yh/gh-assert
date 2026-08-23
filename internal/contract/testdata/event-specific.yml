@@ -1,0 +1,18 @@
+env:
+  COMMON:
+    required: true
+    type:
+      string: {}
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        required: true
+        type:
+          string:
+            enum: [web, cron]
+  workflow_run:
+    env:
+      CONCLUSION:
+        type:
+          string: {}

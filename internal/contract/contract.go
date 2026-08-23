@@ -69,13 +69,28 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 
 // Validate checks a parsed contract without preparing it for runtime use.
 func Validate(path string, parsed *model.Contract) error {
-	if parsed.Env == nil && parsed.Inputs == nil {
-		return fmt.Errorf("%s: env or inputs is required", path)
+	if parsed.Env == nil && parsed.Inputs == nil && len(parsed.On) == 0 {
+		return fmt.Errorf("%s: env, inputs, or on is required", path)
 	}
 	if err := validateSection("env", parsed.Env); err != nil {
 		return err
 	}
-	return validateSection("inputs", parsed.Inputs)
+	if err := validateSection("inputs", parsed.Inputs); err != nil {
+		return err
+	}
+	for _, event := range slices.Sorted(maps.Keys(parsed.On)) {
+		scoped := parsed.On[event]
+		if scoped.Env == nil && scoped.Inputs == nil {
+			return fmt.Errorf("%s: on.%s requires env or inputs", path, event)
+		}
+		if err := validateSection("on."+event+".env", scoped.Env); err != nil {
+			return err
+		}
+		if err := validateSection("on."+event+".inputs", scoped.Inputs); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateSection(section string, rules map[string]model.Rule) error {
@@ -120,7 +135,11 @@ func validateRule(section, name string, rule model.Rule, position model.Position
 
 // Compile prepares a validated contract for runtime use.
 func Compile(parsed *model.Contract) {
-	for _, rules := range []map[string]model.Rule{parsed.Env, parsed.Inputs} {
+	sections := []map[string]model.Rule{parsed.Env, parsed.Inputs}
+	for _, event := range parsed.On {
+		sections = append(sections, event.Env, event.Inputs)
+	}
+	for _, rules := range sections {
 		for name, rule := range rules {
 			switch {
 			case rule.Type.String != nil:

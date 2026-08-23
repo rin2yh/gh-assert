@@ -23,7 +23,7 @@ func Validate(item model.ContractFile) error {
 	if !reusable {
 		return nil
 	}
-	return compareInputs(path, call.Inputs, item.Contract.Inputs)
+	return compareInputs(path, call.Inputs, item.Contract.Effective("workflow_call").Inputs)
 }
 
 func load(contractPath string) (*github.Workflow, string, error) {

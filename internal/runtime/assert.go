@@ -46,8 +46,13 @@ type Violation struct {
 }
 
 func Assert(item model.ContractFile) ([]Violation, error) {
-	if len(item.Contract.Inputs) == 0 {
-		return assert(item.Contract, environment{}, values(nil)), nil
+	event := os.Getenv("GITHUB_EVENT_NAME")
+	if len(item.Contract.On) > 0 && event == "" {
+		return nil, fmt.Errorf("%s: an event-specific contract requires GITHUB_EVENT_NAME", item.Path)
+	}
+	effective := item.Contract.Effective(event)
+	if len(effective.Inputs) == 0 {
+		return assert(effective, environment{}, values(nil)), nil
 	}
 
 	forwarded, err := requiresForwardedInputs(item.Path)
@@ -62,16 +67,15 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
-		return assert(item.Contract, environment{}, values(inputs)), nil
+		return assert(effective, environment{}, values(inputs)), nil
 	}
 
-	event := os.Getenv("GITHUB_EVENT_NAME")
 	if event == workflowDispatch {
 		inputs, err := loadEventInputs()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
-		return assert(item.Contract, environment{}, values(inputs)), nil
+		return assert(effective, environment{}, values(inputs)), nil
 	}
 
 	if event == "" {

@@ -79,6 +79,33 @@ func TestParseAcceptsSectionOnlyContracts(t *testing.T) {
 	}
 }
 
+func TestParseAcceptsEventOnlyContract(t *testing.T) {
+	path := test.WriteFile(t, t.TempDir(), "contract.yml", "on:\n  workflow_run:\n    env: {}\n")
+	c, err := LoadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c.On["workflow_run"].Env == nil {
+		t.Fatal("event-specific env section was not parsed")
+	}
+}
+
+func TestParseRejectsEmptyEventContract(t *testing.T) {
+	path := test.WriteFile(t, t.TempDir(), "contract.yml", "on:\n  workflow_run: {}\n")
+	_, err := LoadFile(path)
+	if err == nil || !strings.Contains(err.Error(), "on.workflow_run requires env or inputs") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestParseValidatesEventSpecificRules(t *testing.T) {
+	path := test.WriteFile(t, t.TempDir(), "contract.yml", "on:\n  workflow_dispatch:\n    inputs:\n      retries:\n        type:\n          integer:\n            min: 2\n            max: 1\n")
+	_, err := LoadFile(path)
+	if err == nil || !strings.Contains(err.Error(), "min must not be greater than max") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 	dir := t.TempDir()
 	test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")

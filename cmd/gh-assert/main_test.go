@@ -112,6 +112,41 @@ func TestRuntimeSucceedsWithValidInputs(t *testing.T) {
 	runCommand(t, []string{"--contract", path}, 0)
 }
 
+func TestRuntimeAppliesCommonAndEventSpecificRules(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "workflow_run")
+	t.Setenv("COMMON", "present")
+	t.Setenv("CONCLUSION", "failure")
+	path := writeContract(t, "env:\n  COMMON:\n    required: true\n    type:\n      string: {}\non:\n  workflow_run:\n    env:\n      CONCLUSION:\n        required: true\n        type:\n          string:\n            enum: [success]\n  workflow_dispatch:\n    env:\n      DISPATCH_ONLY:\n        required: true\n        type:\n          string: {}\n")
+
+	_, stderr := runCommand(t, []string{"--contract", path}, 1)
+	assertContains(t, stderr, "env CONCLUSION", true)
+	assertContains(t, stderr, "DISPATCH_ONLY", false)
+}
+
+func TestRuntimeAppliesEventSpecificInputs(t *testing.T) {
+	setEvent(t, `{"inputs":{"deploy_type":"database"}}`)
+	path := writeContract(t, "env: {}\non:\n  workflow_dispatch:\n    inputs:\n      deploy_type:\n        required: true\n        type:\n          string:\n            enum: [web, cron]\n")
+
+	_, stderr := runCommand(t, []string{"--contract", path}, 1)
+	assertContains(t, stderr, "input deploy_type", true)
+}
+
+func TestRuntimeEventSpecificRuleReplacesCommonRule(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "workflow_run")
+	t.Setenv("MODE", "event")
+	path := writeContract(t, "env:\n  MODE:\n    required: true\n    type:\n      string:\n        enum: [common]\non:\n  workflow_run:\n    env:\n      MODE:\n        required: true\n        type:\n          string:\n            enum: [event]\n")
+
+	runCommand(t, []string{"--contract", path}, 0)
+}
+
+func TestRuntimeEventSpecificContractRequiresEventName(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "")
+	path := writeContract(t, "on:\n  workflow_run:\n    env: {}\n")
+
+	_, stderr := runCommand(t, []string{"--contract", path}, 2)
+	assertContains(t, stderr, "GITHUB_EVENT_NAME", true)
+}
+
 func TestRuntimeAssertsReusableWorkflowInputValues(t *testing.T) {
 	t.Setenv("GITHUB_EVENT_NAME", "push")
 	t.Setenv("GITHUB_EVENT_PATH", "")
