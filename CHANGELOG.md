@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.3](https://github.com/rin2yh/gh-assert/compare/v0.0.2...v0.0.3) - 2026-08-23
+
+- fix(release): reuse tagpr draft when publishing assets by @rin2yh in https://github.com/rin2yh/gh-assert/pull/10
+
 ## [v0.0.2](https://github.com/rin2yh/gh-assert/compare/v0.0.1...v0.0.2) - 2026-08-23
 
 - docs: roadmapのバージョン表記を0.1.0基準に修正 by @rin2yh in https://github.com/rin2yh/gh-assert/pull/6
