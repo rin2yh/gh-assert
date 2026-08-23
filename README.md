@@ -43,7 +43,7 @@ Place the Action in a workflow step and pass the environment values that the con
     DRY_RUN: ${{ vars.DRY_RUN }}
 ```
 
-The Action targets `ubuntu-latest` in v0.1. It downloads the Linux amd64 release binary and verifies it against the release's `checksums.txt` before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
+Pick a tag that [Releases](https://github.com/rin2yh/gh-assert/releases) already publishes; the example above names the next one. The Action targets `ubuntu-latest` in v0.1. It downloads the Linux amd64 release binary and verifies it against the release's `checksums.txt` before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
 
 When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
 

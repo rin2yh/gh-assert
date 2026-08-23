@@ -30,6 +30,10 @@ checksum:
 release:
   # tagpr が作成済みのリリースにアセットだけ追加する
   mode: append
+  # 途中で失敗した実行をやり直せるよう、既存アセットは上書きする
+  replace_existing_artifacts: true
+  # アセットが揃うまで公開しない。公開は後続ステップで行う
+  draft: true
 
 changelog:
   disable: true
