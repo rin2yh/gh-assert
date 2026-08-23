@@ -14,8 +14,8 @@ func TestIsReusableWorkflow(t *testing.T) {
 		workflow string
 		want     bool
 	}{
-		{name: "workflow call", workflow: "on:\n  workflow_call:\n", want: true},
-		{name: "workflow dispatch", workflow: "on: workflow_dispatch\n", want: false},
+		{name: "workflow call", workflow: "on:\n  workflow_call:\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n", want: true},
+		{name: "workflow dispatch", workflow: "on: workflow_dispatch\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n", want: false},
 		{name: "missing workflow", want: false},
 	}
 	for _, tt := range tests {

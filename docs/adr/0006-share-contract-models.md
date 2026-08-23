@@ -8,9 +8,9 @@ Contract、rule、type、診断位置を表す`Position`はparserだけでなく
 
 gh-assert固有の共有構造を`internal/model`へ置く。`Contract`、`Rule`、`Type`、`Position`をmodelとし、読み込みやvalidationの処理は含めない。
 
-Contract用とWorkflow用のParserは専用の構造体として分け、公開する操作はそれぞれの`Parse`メソッドだけとする。Contract Parserは`model.Contract`を生成し、validationは`internal/contract`が担当する。
+Contract Parserは`model.Contract`を生成し、validationは`internal/contract`が担当する。
 
-GitHub Actions由来のWorkflow構造はgh-assert固有のmodelではないため、`internal/model`には置かず`internal/github`に置く。
+GitHub Actions由来のWorkflow構造はgh-assert固有のmodelではないため、`internal/model`には置かない。Workflowはactionlint ASTを直接利用する。
 
 ## Consequences
 

@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rin2yh/gh-assert/internal/github"
+	"github.com/rhysd/actionlint"
 )
 
 const (
@@ -24,14 +24,19 @@ func isReusableWorkflow(contractPath string) (bool, error) {
 		return false, nil
 	}
 	path := strings.TrimSuffix(contractPath, suffix) + ".yml"
-	workflow, err := github.NewParser(path).Parse()
+	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	_, reusable := workflow.Events["workflow_call"]
+	workflow, parseErrors := actionlint.Parse(data)
+	if len(parseErrors) > 0 {
+		first := parseErrors[0]
+		return false, fmt.Errorf("%s:%d:%d: %s", path, first.Line, first.Column, first.Message)
+	}
+	_, reusable := workflow.FindWorkflowCallEvent()
 	return reusable, nil
 }
 

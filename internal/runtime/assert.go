@@ -48,9 +48,17 @@ type Violation struct {
 
 func Assert(item model.ContractFile) ([]Violation, error) {
 	event := os.Getenv("GITHUB_EVENT_NAME")
-	reusable, err := isReusableWorkflow(item.Path)
+	forwarded, err := composite.Is(item.Path)
 	if err != nil {
 		return nil, err
+	}
+	reusable := false
+	if !forwarded {
+		reusable, err = isReusableWorkflow(item.Path)
+		if err != nil {
+			return nil, err
+		}
+		forwarded = reusable
 	}
 	events := []string{event}
 	if reusable {
@@ -61,13 +69,6 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		return assert(effective, environment{}, values(nil)), nil
 	}
 
-	forwarded := reusable
-	if !forwarded {
-		forwarded, err = composite.Is(item.Path)
-		if err != nil {
-			return nil, err
-		}
-	}
 	if forwarded {
 		if os.Getenv(inputsJSON) == "" {
 			return nil, fmt.Errorf("%s: inputs must be passed with inputs: ${{ toJSON(inputs) }}", item.Path)
