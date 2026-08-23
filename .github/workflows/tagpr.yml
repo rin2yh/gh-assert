@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    # ドキュメントだけの変更ではリリース PR を作らない。
+    # CHANGELOG.md は tagpr のリリース PR が唯一書き換えるファイルなので、
+    # ここに加えるとマージしてもタグが打たれなくなる。除外しないこと。
+    paths-ignore:
+      - docs/**
+      - README.md
+      - LICENSE
 
 permissions: {}
 
