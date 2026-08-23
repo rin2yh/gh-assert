@@ -28,12 +28,14 @@ checksum:
   name_template: checksums.txt
 
 release:
-  # アセットをアップロードした draft を GoReleaser 自身が公開する
-  draft: false
-  # 失敗したリリースを再実行する場合は既存の draft を引き継ぐ
+  # tagpr が作成した draft にアセットを追加する
+  mode: append
+  # tagpr の draft と別の draft が作られないよう、既存のものを使う
   use_existing_draft: true
   # 途中で失敗した実行をやり直せるよう、既存アセットは上書きする
   replace_existing_artifacts: true
+  # アセットが揃うまで公開しない。公開は後続ステップで行う
+  draft: true
 
 changelog:
   disable: true
