@@ -14,7 +14,7 @@ import (
 )
 
 func LoadFile(path string) (*model.Contract, error) {
-	parsed, err := (parser.ContractParser{}).Parse(path)
+	parsed, err := parser.NewContractParser(path).Parse()
 	if err != nil {
 		return nil, err
 	}

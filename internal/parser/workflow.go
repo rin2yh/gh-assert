@@ -8,14 +8,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type WorkflowParser struct{}
+type WorkflowParser struct {
+	path string
+}
 
-func (WorkflowParser) Parse(path string) (*github.Workflow, error) {
-	data, err := os.ReadFile(path)
+func NewWorkflowParser(path string) *WorkflowParser {
+	return &WorkflowParser{path: path}
+}
+
+func (p *WorkflowParser) Parse() (*github.Workflow, error) {
+	data, err := os.ReadFile(p.path)
 	if err != nil {
 		return nil, err
 	}
-	return parseWorkflow(path, data)
+	return parseWorkflow(p.path, data)
 }
 
 func parseWorkflow(path string, data []byte) (*github.Workflow, error) {

@@ -9,14 +9,20 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type ContractParser struct{}
+type ContractParser struct {
+	path string
+}
 
-func (ContractParser) Parse(path string) (*model.Contract, error) {
-	data, err := os.ReadFile(path)
+func NewContractParser(path string) *ContractParser {
+	return &ContractParser{path: path}
+}
+
+func (p *ContractParser) Parse() (*model.Contract, error) {
+	data, err := os.ReadFile(p.path)
 	if err != nil {
 		return nil, err
 	}
-	return parseContract(path, data)
+	return parseContract(p.path, data)
 }
 
 func parseContract(path string, data []byte) (*model.Contract, error) {

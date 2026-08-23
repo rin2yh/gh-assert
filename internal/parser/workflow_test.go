@@ -33,7 +33,7 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 
 func TestParseWorkflowInputs(t *testing.T) {
 	path := filepath.Join("testdata", "workflow.yml")
-	workflow, err := (WorkflowParser{}).Parse(path)
+	workflow, err := NewWorkflowParser(path).Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestParseWorkflowInputs(t *testing.T) {
 }
 
 func TestWorkflowParserReturnsReadError(t *testing.T) {
-	_, err := (WorkflowParser{}).Parse(filepath.Join(t.TempDir(), "missing.yml"))
+	_, err := NewWorkflowParser(filepath.Join(t.TempDir(), "missing.yml")).Parse()
 	if err == nil {
 		t.Fatal("expected an error")
 	}

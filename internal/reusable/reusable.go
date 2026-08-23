@@ -69,7 +69,7 @@ func load(contractPath string) (*github.Workflow, string, error) {
 	if !ok {
 		return nil, "", nil
 	}
-	workflow, err := (parser.WorkflowParser{}).Parse(path)
+	workflow, err := parser.NewWorkflowParser(path).Parse()
 	if os.IsNotExist(err) {
 		return nil, path, nil
 	}

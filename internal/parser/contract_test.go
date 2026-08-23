@@ -8,7 +8,7 @@ import (
 
 func TestContractParserParse(t *testing.T) {
 	path := filepath.Join("testdata", "contract.yml")
-	parsed, err := (ContractParser{}).Parse(path)
+	parsed, err := NewContractParser(path).Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,14 +27,14 @@ func TestContractParserParse(t *testing.T) {
 
 func TestContractParserRejectsUnknownField(t *testing.T) {
 	path := filepath.Join("testdata", "unknown_contract.yml")
-	_, err := (ContractParser{}).Parse(path)
+	_, err := NewContractParser(path).Parse()
 	if err == nil || !strings.Contains(err.Error(), "field unknown not found") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestContractParserReturnsReadError(t *testing.T) {
-	_, err := (ContractParser{}).Parse(filepath.Join(t.TempDir(), "missing.yml"))
+	_, err := NewContractParser(filepath.Join(t.TempDir(), "missing.yml")).Parse()
 	if err == nil {
 		t.Fatal("expected an error")
 	}
