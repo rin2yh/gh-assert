@@ -81,7 +81,7 @@ func TestLoadEventInputsReadsEventPayload(t *testing.T) {
 func TestLoadWorkflowInputsReadsInputsContext(t *testing.T) {
 	t.Setenv(inputsJSON, `{"environment":"staging","retries":3,"dry-run":true,"note":null}`)
 
-	inputs, err := loadWorkflowInputs()
+	inputs, err := loadForwardedInputs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -101,7 +101,7 @@ func TestLoadWorkflowInputsRejectsInvalidContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(inputsJSON, tt.inputs)
 
-			_, err := loadWorkflowInputs()
+			_, err := loadForwardedInputs()
 			test.AssertError(t, err)
 		})
 	}

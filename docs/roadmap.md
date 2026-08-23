@@ -62,12 +62,16 @@ Reusable Workflowをcontractの対象に追加する。
 * Actionで利用するenv
 * runtime assertion
 
+Composite Actionの`action.yml`と`action_assert.yml`について、input名と`required`の静的検証を行う。Action inputsはGitHub Actions上では文字列として渡されるため、contractの`string` / `integer` / `boolean`はruntime値の意味上の型として検証する。
+
+Action metadataには外部から受け取るenvの宣言箇所がないため、envは`action_assert.yml`で定義しruntime assertionの対象とする。Action inputsは`inputs: ${{ toJSON(inputs) }}`でgh-assertへ明示的に渡す。
+
 ## Future
 
 * GitHub annotation
 * `gh assert init`
   * contractを対象にgh-assertのstepを生成・更新する
-  * Reusable Workflowでは`workflow-inputs: ${{ toJSON(inputs) }}`を自動で追加する
+  * Reusable Workflowでは`inputs: ${{ toJSON(inputs) }}`を自動で追加する
 
 ## Non-goals
 

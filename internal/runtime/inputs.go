@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/rin2yh/gh-assert/internal/composite"
 	"github.com/rin2yh/gh-assert/internal/github"
 )
 
@@ -35,6 +36,14 @@ func isReusableWorkflow(contractPath string) (bool, error) {
 	return reusable, nil
 }
 
+func requiresForwardedInputs(contractPath string) (bool, error) {
+	reusable, err := isReusableWorkflow(contractPath)
+	if err != nil || reusable {
+		return reusable, err
+	}
+	return composite.Is(contractPath)
+}
+
 func loadEventInputs() (map[string]string, error) {
 	path := os.Getenv("GITHUB_EVENT_PATH")
 	if path == "" {
@@ -51,7 +60,7 @@ func loadEventInputs() (map[string]string, error) {
 	return inputs, nil
 }
 
-func loadWorkflowInputs() (map[string]string, error) {
+func loadForwardedInputs() (map[string]string, error) {
 	var inputs map[string]any
 	if err := decode([]byte(os.Getenv(inputsJSON)), &inputs); err != nil {
 		return nil, fmt.Errorf("%s: inputs context is not valid JSON: %w", inputsJSON, err)

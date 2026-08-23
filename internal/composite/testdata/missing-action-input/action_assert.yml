@@ -1,0 +1,4 @@
+inputs:
+  extra:
+    type:
+      string: {}

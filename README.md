@@ -2,7 +2,7 @@
 
 Declarative environment assertions for GitHub Actions.
 
-`gh-assert` moves common shell checks into a small YAML contract. Version 0.0.4 validates environment variables and workflow inputs at runtime, and validates reusable workflow interfaces statically.
+`gh-assert` moves common shell checks into a small YAML contract. It validates environment variables and inputs at runtime, and validates Reusable Workflow and Composite Action interfaces statically.
 
 ## Contract
 
@@ -37,7 +37,7 @@ inputs:
         max: 5
 ```
 
-A contract declares `env`, `inputs`, or both. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside v0.0.4. Composite Action contracts are outside v0.0.4.
+A contract declares `env`, `inputs`, or both. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
 
 ## Runtime assertion
 
@@ -72,17 +72,41 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: rin2yh/gh-assert@<full-length-commit-sha> # v0.0.4
+      - uses: rin2yh/gh-assert@<full-length-commit-sha> # v0.1.0
         with:
           contract: .github/workflows/deploy_assert.yml
-          workflow-inputs: ${{ toJSON(inputs) }}
+          inputs: ${{ toJSON(inputs) }}
         env:
           ENVIRONMENT: ${{ inputs.environment }}
 ```
 
 For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, the Action asserts the explicitly forwarded input values and the declared environment variables.
 
-GitHub does not automatically pass a reusable workflow's `inputs` context to a Composite Action, so `workflow-inputs: ${{ toJSON(inputs) }}` is required when the contract declares inputs. gh-assert fails instead of silently skipping runtime input assertions when it is omitted. Values are still hidden from diagnostics.
+GitHub does not automatically pass a reusable workflow's `inputs` context to a Composite Action, so `inputs: ${{ toJSON(inputs) }}` is required when the contract declares inputs. gh-assert fails instead of silently skipping runtime input assertions when it is omitted. Values are still hidden from diagnostics.
+
+## Composite Actions
+
+Place a contract next to a Composite Action:
+
+```text
+.github/actions/deploy/
+  action.yml
+  action_assert.yml
+```
+
+The contract uses the same `inputs` and `env` sections as a workflow contract. Add gh-assert as the first step of the Composite Action and forward the Action's inputs:
+
+```yaml
+runs:
+  using: composite
+  steps:
+    - uses: rin2yh/gh-assert@<full-length-commit-sha> # v0.1.0
+      with:
+        contract: .github/actions/deploy/action_assert.yml
+        inputs: ${{ toJSON(inputs) }}
+```
+
+Static validation compares the input names and `required` settings in `action.yml` with `action_assert.yml`. Composite Action inputs are strings at the GitHub Actions interface, but a contract can apply semantic `string`, `integer`, or `boolean` validation to their runtime values. Environment variables passed to the Composite Action remain available to gh-assert. They have no declaration in Action metadata, so their contract is checked at runtime.
 
 ## Validate a contract
 
@@ -104,7 +128,7 @@ To validate one contract, pass its path as a positional argument.
 gh-assert validate .github/workflows/deploy_assert.yml
 ```
 
-Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. For reusable workflows, it also checks that `workflow_call.inputs` matches the sibling contract's input names, `required` settings and types. It does not execute a workflow.
+Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. For Reusable Workflows, it also checks that `workflow_call.inputs` matches the sibling contract's input names, `required` settings and types. For Composite Actions, it checks that the sibling `action.yml` matches the contract's input names and `required` settings. It does not execute a workflow or Action.
 
 Runtime assertion follows the same path rule:
 

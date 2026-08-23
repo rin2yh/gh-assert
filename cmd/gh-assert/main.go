@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/rin2yh/gh-assert/internal/composite"
 	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/diagnostic"
 	"github.com/rin2yh/gh-assert/internal/reusable"
@@ -95,6 +96,9 @@ func newValidateCommand(stdout io.Writer) *cobra.Command {
 				if err := reusable.Validate(item); err != nil {
 					return &commandError{code: 2, err: err}
 				}
+				if err := composite.Validate(item); err != nil {
+					return &commandError{code: 2, err: err}
+				}
 				if _, err := fmt.Fprintf(stdout, "%s: contract is valid\n", item.Path); err != nil {
 					return err
 				}
@@ -112,6 +116,9 @@ func runRuntime(cmd *cobra.Command, path string) error {
 	failed := false
 	for _, item := range loaded {
 		if err := reusable.Validate(item); err != nil {
+			return &commandError{code: 2, err: err}
+		}
+		if err := composite.Validate(item); err != nil {
 			return &commandError{code: 2, err: err}
 		}
 		violations, err := runtime.Assert(item)

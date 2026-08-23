@@ -42,6 +42,18 @@ func TestValidateRejectsReusableWorkflowInterfaceMismatch(t *testing.T) {
 	assertContains(t, stderr, "reusable workflow interface does not match contract", true)
 }
 
+func TestValidateCompositeActionInterface(t *testing.T) {
+	stdout, _ := runCommand(t, []string{"validate", "testdata/composite/action_assert.yml"}, 0)
+
+	assertContains(t, stdout, "contract is valid", true)
+}
+
+func TestValidateRejectsCompositeActionInterfaceMismatch(t *testing.T) {
+	_, stderr := runCommand(t, []string{"validate", "testdata/composite-mismatch/action_assert.yml"}, 2)
+
+	assertContains(t, stderr, "composite action interface does not match contract", true)
+}
+
 func TestRuntimeContractPathArguments(t *testing.T) {
 	t.Setenv("FLAG", "true")
 	path := writeContract(t, "env:\n  FLAG:\n    required: true\n    type:\n      boolean: {}\n")
@@ -117,7 +129,7 @@ func TestRuntimeReusableWorkflowRequiresInputValues(t *testing.T) {
 
 	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 2)
 
-	assertContains(t, stderr, "workflow-inputs", true)
+	assertContains(t, stderr, "inputs:", true)
 }
 
 func TestRuntimeReusableWorkflowUsesInputsContextForWorkflowDispatchCaller(t *testing.T) {
@@ -126,6 +138,33 @@ func TestRuntimeReusableWorkflowUsesInputsContextForWorkflowDispatchCaller(t *te
 	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"staging"}`)
 
 	runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 0)
+}
+
+func TestRuntimeAssertsCompositeActionInputValues(t *testing.T) {
+	t.Setenv("GITHUB_EVENT_NAME", "push")
+	t.Setenv("GITHUB_EVENT_PATH", "")
+	t.Setenv("TOKEN", "present")
+	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"develop","retries":"2"}`)
+
+	_, stderr := runCommand(t, []string{"--contract", "testdata/composite/action_assert.yml"}, 1)
+
+	assertContains(t, stderr, "allowed enum", true)
+	assertContains(t, stderr, "develop", false)
+}
+
+func TestRuntimeCompositeActionRequiresInputValues(t *testing.T) {
+	t.Setenv("GH_ASSERT_INPUTS", "")
+
+	_, stderr := runCommand(t, []string{"--contract", "testdata/composite/action_assert.yml"}, 2)
+
+	assertContains(t, stderr, "inputs:", true)
+}
+
+func TestRuntimeCompositeActionAssertsEnvironmentAndInputs(t *testing.T) {
+	t.Setenv("TOKEN", "present")
+	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"staging","retries":"3"}`)
+
+	runCommand(t, []string{"--contract", "testdata/composite/action_assert.yml"}, 0)
 }
 
 func TestRuntimeRejectsInputsContractOutsideWorkflowDispatch(t *testing.T) {

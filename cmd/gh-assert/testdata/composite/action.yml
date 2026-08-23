@@ -1,0 +1,11 @@
+name: Deploy
+inputs:
+  environment:
+    required: true
+  retries:
+    required: false
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: echo deploy

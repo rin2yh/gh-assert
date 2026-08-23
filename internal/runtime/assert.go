@@ -50,15 +50,15 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		return assert(item.Contract, environment{}, values(nil)), nil
 	}
 
-	reusable, err := isReusableWorkflow(item.Path)
+	forwarded, err := requiresForwardedInputs(item.Path)
 	if err != nil {
 		return nil, err
 	}
-	if reusable {
+	if forwarded {
 		if os.Getenv(inputsJSON) == "" {
-			return nil, fmt.Errorf("%s: reusable workflow inputs must be passed with workflow-inputs: ${{ toJSON(inputs) }}", item.Path)
+			return nil, fmt.Errorf("%s: inputs must be passed with inputs: ${{ toJSON(inputs) }}", item.Path)
 		}
-		inputs, err := loadWorkflowInputs()
+		inputs, err := loadForwardedInputs()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
