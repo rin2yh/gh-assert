@@ -8,7 +8,45 @@ import (
 	"github.com/rin2yh/gh-assert/internal/test"
 )
 
-func TestEventInputsReadsEventPayload(t *testing.T) {
+func TestIsReusableWorkflow(t *testing.T) {
+	tests := []struct {
+		name     string
+		workflow string
+		want     bool
+	}{
+		{name: "workflow call", workflow: "on:\n  workflow_call:\n", want: true},
+		{name: "workflow dispatch", workflow: "on: workflow_dispatch\n", want: false},
+		{name: "missing workflow", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if tt.workflow != "" {
+				test.WriteFile(t, dir, "deploy.yml", tt.workflow)
+			}
+
+			reusable, err := isReusableWorkflow(filepath.Join(dir, "deploy_assert.yml"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reusable != tt.want {
+				t.Errorf("isReusableWorkflow() = %v, want %v", reusable, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsReusableWorkflowIgnoresOtherContractNames(t *testing.T) {
+	reusable, err := isReusableWorkflow(filepath.Join(t.TempDir(), "contract.yml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reusable {
+		t.Error("isReusableWorkflow() = true, want false")
+	}
+}
+
+func TestLoadEventInputsReadsEventPayload(t *testing.T) {
 	tests := []struct {
 		name string
 		file string
@@ -29,7 +67,7 @@ func TestEventInputsReadsEventPayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", filepath.Join("testdata", tt.file))
 
-			inputs, err := eventInputs()
+			inputs, err := loadEventInputs()
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -40,10 +78,10 @@ func TestEventInputsReadsEventPayload(t *testing.T) {
 	}
 }
 
-func TestWorkflowInputsReadsInputsContext(t *testing.T) {
+func TestLoadWorkflowInputsReadsInputsContext(t *testing.T) {
 	t.Setenv(inputsJSON, `{"environment":"staging","retries":3,"dry-run":true,"note":null}`)
 
-	inputs, err := workflowInputs()
+	inputs, err := loadWorkflowInputs()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +91,7 @@ func TestWorkflowInputsReadsInputsContext(t *testing.T) {
 	}
 }
 
-func TestWorkflowInputsRejectsInvalidContext(t *testing.T) {
+func TestLoadWorkflowInputsRejectsInvalidContext(t *testing.T) {
 	tests := []struct{ name, inputs string }{
 		{name: "invalid json", inputs: "{"},
 		{name: "not an object", inputs: `[]`},
@@ -63,13 +101,13 @@ func TestWorkflowInputsRejectsInvalidContext(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(inputsJSON, tt.inputs)
 
-			_, err := workflowInputs()
+			_, err := loadWorkflowInputs()
 			test.AssertError(t, err)
 		})
 	}
 }
 
-func TestEventInputsRejectsInvalidPayload(t *testing.T) {
+func TestLoadEventInputsRejectsInvalidPayload(t *testing.T) {
 	tests := []struct{ name, file string }{
 		{name: "invalid json", file: "invalid.json"},
 		{name: "non scalar input", file: "non-scalar-input.json"},
@@ -78,13 +116,13 @@ func TestEventInputsRejectsInvalidPayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", filepath.Join("testdata", tt.file))
 
-			_, err := eventInputs()
+			_, err := loadEventInputs()
 			test.AssertError(t, err)
 		})
 	}
 }
 
-func TestEventInputsRejectsUnavailablePayload(t *testing.T) {
+func TestLoadEventInputsRejectsUnavailablePayload(t *testing.T) {
 	tests := []struct{ name, path string }{
 		{name: "no event path", path: ""},
 		{name: "missing file", path: "testdata/absent.json"},
@@ -93,7 +131,7 @@ func TestEventInputsRejectsUnavailablePayload(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv("GITHUB_EVENT_PATH", tt.path)
 
-			_, err := eventInputs()
+			_, err := loadEventInputs()
 			test.AssertError(t, err)
 		})
 	}
