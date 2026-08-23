@@ -10,7 +10,6 @@ import (
 
 	"github.com/rin2yh/gh-assert/internal/github"
 	"github.com/rin2yh/gh-assert/internal/model"
-	"github.com/rin2yh/gh-assert/internal/parser"
 )
 
 // Validate compares a reusable workflow's public input interface with its
@@ -69,7 +68,7 @@ func load(contractPath string) (*github.Workflow, string, error) {
 	if !ok {
 		return nil, "", nil
 	}
-	workflow, err := parser.NewWorkflowParser(path).Parse()
+	workflow, err := github.NewParser(path).Parse()
 	if os.IsNotExist(err) {
 		return nil, path, nil
 	}

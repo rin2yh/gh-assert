@@ -1,4 +1,4 @@
-package parser
+package contract
 
 import (
 	"path/filepath"
@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-func TestContractParserParse(t *testing.T) {
+func TestParserParse(t *testing.T) {
 	path := filepath.Join("testdata", "contract.yml")
-	parsed, err := NewContractParser(path).Parse()
+	parsed, err := NewParser(path).Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,23 +25,23 @@ func TestContractParserParse(t *testing.T) {
 	}
 }
 
-func TestContractParserRejectsUnknownField(t *testing.T) {
+func TestParserRejectsUnknownField(t *testing.T) {
 	path := filepath.Join("testdata", "unknown_contract.yml")
-	_, err := NewContractParser(path).Parse()
+	_, err := NewParser(path).Parse()
 	if err == nil || !strings.Contains(err.Error(), "field unknown not found") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestContractParserReturnsReadError(t *testing.T) {
-	_, err := NewContractParser(filepath.Join(t.TempDir(), "missing.yml")).Parse()
+func TestParserReturnsReadError(t *testing.T) {
+	_, err := NewParser(filepath.Join(t.TempDir(), "missing.yml")).Parse()
 	if err == nil {
 		t.Fatal("expected an error")
 	}
 }
 
-func TestParseContractDoesNotValidateRules(t *testing.T) {
-	parsed, err := NewContractParser("contract.yml").parse([]byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
+func TestParserDoesNotValidateRules(t *testing.T) {
+	parsed, err := NewParser("contract.yml").parse([]byte("env:\n  TOKEN:\n    type:\n      string:\n        pattern: '['\n"))
 	if err != nil {
 		t.Fatal(err)
 	}

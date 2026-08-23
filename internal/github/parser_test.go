@@ -1,11 +1,11 @@
-package parser
+package github
 
 import (
 	"path/filepath"
 	"testing"
 )
 
-func TestParseWorkflowEventSyntaxes(t *testing.T) {
+func TestParserEventSyntaxes(t *testing.T) {
 	tests := []struct {
 		name    string
 		on      string
@@ -19,7 +19,7 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			workflow, err := NewWorkflowParser("workflow.yml").parse([]byte("on: " + tt.on + "\n"))
+			workflow, err := NewParser("workflow.yml").parse([]byte("on: " + tt.on + "\n"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -31,9 +31,9 @@ func TestParseWorkflowEventSyntaxes(t *testing.T) {
 	}
 }
 
-func TestParseWorkflowInputs(t *testing.T) {
+func TestParserInputs(t *testing.T) {
 	path := filepath.Join("testdata", "workflow.yml")
-	workflow, err := NewWorkflowParser(path).Parse()
+	workflow, err := NewParser(path).Parse()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,8 +43,8 @@ func TestParseWorkflowInputs(t *testing.T) {
 	}
 }
 
-func TestWorkflowParserReturnsReadError(t *testing.T) {
-	_, err := NewWorkflowParser(filepath.Join(t.TempDir(), "missing.yml")).Parse()
+func TestParserReturnsReadError(t *testing.T) {
+	_, err := NewParser(filepath.Join(t.TempDir(), "missing.yml")).Parse()
 	if err == nil {
 		t.Fatal("expected an error")
 	}
