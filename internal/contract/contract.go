@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rin2yh/gh-assert/internal/model"
+	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 func LoadFile(path string) (*model.Contract, error) {
@@ -74,38 +75,16 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 }
 
 func validateTarget(path string) error {
-	if isWorkflowContract(path) {
-		return validateWorkflowSibling(path)
+	if workflowPath, ok := target.WorkflowPath(path); ok {
+		return validateWorkflowSibling(path, workflowPath)
 	}
-	if isCompositeActionContract(path) {
+	if _, ok := target.ActionPath(path); ok {
 		return nil
 	}
 	return fmt.Errorf("%s: contract must be placed at .github/workflows/<name>_assert.yml or .github/actions/**/action_assert.yml", path)
 }
 
-func isWorkflowContract(path string) bool {
-	dir := filepath.Dir(path)
-	return strings.HasSuffix(filepath.Base(path), "_assert.yml") &&
-		filepath.Base(dir) == "workflows" && filepath.Base(filepath.Dir(dir)) == ".github"
-}
-
-func isCompositeActionContract(path string) bool {
-	if filepath.Base(path) != "action_assert.yml" {
-		return false
-	}
-	for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
-		if filepath.Base(dir) == "actions" && filepath.Base(filepath.Dir(dir)) == ".github" {
-			return true
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			return false
-		}
-	}
-}
-
-func validateWorkflowSibling(path string) error {
-	workflowPath := strings.TrimSuffix(path, "_assert.yml") + ".yml"
+func validateWorkflowSibling(path, workflowPath string) error {
 	info, err := os.Stat(workflowPath)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("%s: corresponding workflow %s does not exist", path, workflowPath)

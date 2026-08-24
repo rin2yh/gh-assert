@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -20,7 +21,10 @@ func TestIsReusableWorkflow(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
+			dir := filepath.Join(t.TempDir(), ".github", "workflows")
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
 			if tt.workflow != "" {
 				test.WriteFile(t, dir, "deploy.yml", tt.workflow)
 			}
@@ -33,6 +37,17 @@ func TestIsReusableWorkflow(t *testing.T) {
 				t.Errorf("isReusableWorkflow() = %v, want %v", reusable, tt.want)
 			}
 		})
+	}
+}
+
+func TestIsReusableWorkflowIgnoresCompositeActionContract(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".github", "actions", "deploy", "action_assert.yml")
+	reusable, err := isReusableWorkflow(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reusable {
+		t.Error("isReusableWorkflow() = true, want false")
 	}
 }
 

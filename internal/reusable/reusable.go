@@ -10,6 +10,7 @@ import (
 
 	"github.com/rhysd/actionlint"
 	"github.com/rin2yh/gh-assert/internal/model"
+	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 // Validate compares a reusable workflow's public input interface with its
@@ -56,11 +57,7 @@ func load(contractPath string) (*actionlint.Workflow, string, error) {
 }
 
 func workflowPath(contractPath string) (string, bool) {
-	const suffix = "_assert.yml"
-	if !strings.HasSuffix(contractPath, suffix) || filepath.Base(contractPath) == "action_assert.yml" {
-		return "", false
-	}
-	return strings.TrimSuffix(contractPath, suffix) + ".yml", true
+	return target.WorkflowPath(contractPath)
 }
 
 func compareInputs(path string, call *actionlint.WorkflowCallEvent, contractInputs map[string]model.Rule) error {

@@ -84,12 +84,17 @@ func TestValidateReusableInterfaceAllowsMissingWorkflow(t *testing.T) {
 }
 
 func fixtureContractPath(name string) string {
-	return filepath.Join("testdata", name, "deploy_assert.yml")
+	return filepath.Join("testdata", name, ".github", "workflows", "deploy_assert.yml")
 }
 
 func TestWorkflowPath(t *testing.T) {
-	got, ok := workflowPath(filepath.Join(".github", "workflows", "deploy_assert.yml"))
-	if !ok || got != filepath.Join(".github", "workflows", "deploy.yml") {
-		t.Fatalf("workflowPath() = %q, %t", got, ok)
+	for _, name := range []string{"deploy", "action"} {
+		got, ok := workflowPath(filepath.Join(".github", "workflows", name+"_assert.yml"))
+		if !ok || got != filepath.Join(".github", "workflows", name+".yml") {
+			t.Fatalf("workflowPath() = %q, %t", got, ok)
+		}
+	}
+	if _, ok := workflowPath(filepath.Join(".github", "actions", "deploy", "action_assert.yml")); ok {
+		t.Fatal("workflowPath() treated a Composite Action contract as a Workflow contract")
 	}
 }

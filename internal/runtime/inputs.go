@@ -8,9 +8,9 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/rhysd/actionlint"
+	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 const (
@@ -19,11 +19,10 @@ const (
 )
 
 func isReusableWorkflow(contractPath string) (bool, error) {
-	const suffix = "_assert.yml"
-	if !strings.HasSuffix(contractPath, suffix) {
+	path, ok := target.WorkflowPath(contractPath)
+	if !ok {
 		return false, nil
 	}
-	path := strings.TrimSuffix(contractPath, suffix) + ".yml"
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return false, nil

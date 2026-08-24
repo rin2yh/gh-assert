@@ -183,11 +183,11 @@ func TestLoadTargetsRejectsActionContractFilenameOutsideActions(t *testing.T) {
 
 func TestLoadTargetsTreatsActionAssertInWorkflowsAsWorkflowContract(t *testing.T) {
 	dir := workflowTestDir(t)
+	test.WriteFile(t, dir, "action.yml", "on: push\n")
 	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
 
-	_, err := LoadTargets(path)
-	if err == nil || !strings.Contains(err.Error(), "corresponding workflow") {
-		t.Fatalf("unexpected error: %v", err)
+	if _, err := LoadTargets(path); err != nil {
+		t.Fatal(err)
 	}
 }
 

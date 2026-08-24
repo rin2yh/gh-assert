@@ -53,6 +53,15 @@ func TestValidateRejectsReusableWorkflowInterfaceMismatch(t *testing.T) {
 	assertContains(t, stderr, "reusable workflow interface does not match contract", true)
 }
 
+func TestValidateWorkflowNamedAction(t *testing.T) {
+	dir := workflowTestDir(t)
+	test.WriteFile(t, dir, "action.yml", "on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n")
+	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
+
+	stdout, _ := runCommand(t, []string{"validate", path}, 0)
+	assertContains(t, stdout, "contract is valid", true)
+}
+
 func TestValidateCompositeActionInterface(t *testing.T) {
 	stdout, _ := runCommand(t, []string{"validate", "testdata/composite/.github/actions/deploy/action_assert.yml"}, 0)
 

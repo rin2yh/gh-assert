@@ -81,7 +81,7 @@ func TestIs(t *testing.T) {
 }
 
 func fixtureContractPath(name string) string {
-	return filepath.Join("testdata", name, contractName)
+	return filepath.Join("testdata", name, ".github", "actions", "deploy", contractName)
 }
 
 func TestActionPath(t *testing.T) {
@@ -89,5 +89,8 @@ func TestActionPath(t *testing.T) {
 	want := filepath.Join(".github", "actions", "deploy", "action.yml")
 	if !ok || got != want {
 		t.Fatalf("actionPath() = %q, %t, want %q, true", got, ok, want)
+	}
+	if _, ok := actionPath(filepath.Join(".github", "workflows", contractName)); ok {
+		t.Fatal("actionPath() treated a Workflow contract as a Composite Action contract")
 	}
 }
