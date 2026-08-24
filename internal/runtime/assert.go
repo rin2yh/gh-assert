@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/rin2yh/gh-assert/internal/composite"
+	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
@@ -60,9 +61,9 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		}
 		forwarded = reusable
 	}
-	effective := item.Contract.Effective(event)
+	effective := contract.Resolve(item.Contract, event)
 	if reusable {
-		effective.Inputs = item.Contract.Effective("workflow_call").Inputs
+		effective.Inputs = contract.Resolve(item.Contract, "workflow_call").Inputs
 	}
 	if len(effective.Inputs) == 0 {
 		return assert(effective, environment{}, values(nil)), nil

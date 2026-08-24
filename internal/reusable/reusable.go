@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/rhysd/actionlint"
+	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
@@ -23,7 +24,7 @@ func Validate(item model.ContractFile) error {
 	if !reusable {
 		return nil
 	}
-	return compareInputs(path, call, item.Contract.Effective("workflow_call").Inputs)
+	return compareInputs(path, call, contract.Resolve(item.Contract, "workflow_call").Inputs)
 }
 
 func load(contractPath string) (*actionlint.Workflow, string, error) {

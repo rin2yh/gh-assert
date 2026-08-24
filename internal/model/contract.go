@@ -1,9 +1,6 @@
 package model
 
-import (
-	"maps"
-	"regexp"
-)
+import "regexp"
 
 type Contract struct {
 	Env    map[string]Rule          `yaml:"env"`
@@ -14,33 +11,6 @@ type Contract struct {
 type EventContract struct {
 	Env    map[string]Rule `yaml:"env"`
 	Inputs map[string]Rule `yaml:"inputs"`
-}
-
-// Effective returns the common rules combined with the rules for event.
-// Event-specific rules replace common rules with the same name.
-func (c *Contract) Effective(event string) *Contract {
-	effective := &Contract{
-		Env:    maps.Clone(c.Env),
-		Inputs: maps.Clone(c.Inputs),
-	}
-	scoped, ok := c.On[event]
-	if !ok {
-		return effective
-	}
-	effective.Env = mergeRules(effective.Env, scoped.Env)
-	effective.Inputs = mergeRules(effective.Inputs, scoped.Inputs)
-	return effective
-}
-
-func mergeRules(common, scoped map[string]Rule) map[string]Rule {
-	if scoped == nil {
-		return common
-	}
-	if common == nil {
-		common = make(map[string]Rule, len(scoped))
-	}
-	maps.Copy(common, scoped)
-	return common
 }
 
 type ContractFile struct {
