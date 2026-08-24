@@ -74,16 +74,37 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 }
 
 func validateTarget(path string) error {
-	if filepath.Base(path) == "action_assert.yml" {
+	if isWorkflowContract(path) {
+		return validateWorkflowSibling(path)
+	}
+	if isCompositeActionContract(path) {
 		return nil
 	}
-	if !strings.HasSuffix(path, "_assert.yml") {
-		return fmt.Errorf("%s: workflow contract must be named <name>_assert.yml", path)
-	}
+	return fmt.Errorf("%s: contract must be placed at .github/workflows/<name>_assert.yml or .github/actions/**/action_assert.yml", path)
+}
+
+func isWorkflowContract(path string) bool {
 	dir := filepath.Dir(path)
-	if filepath.Base(dir) != "workflows" || filepath.Base(filepath.Dir(dir)) != ".github" {
-		return fmt.Errorf("%s: workflow contract must be placed at .github/workflows/<name>_assert.yml", path)
+	return strings.HasSuffix(filepath.Base(path), "_assert.yml") &&
+		filepath.Base(dir) == "workflows" && filepath.Base(filepath.Dir(dir)) == ".github"
+}
+
+func isCompositeActionContract(path string) bool {
+	if filepath.Base(path) != "action_assert.yml" {
+		return false
 	}
+	for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
+		if filepath.Base(dir) == "actions" && filepath.Base(filepath.Dir(dir)) == ".github" {
+			return true
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return false
+		}
+	}
+}
+
+func validateWorkflowSibling(path string) error {
 	workflowPath := strings.TrimSuffix(path, "_assert.yml") + ".yml"
 	info, err := os.Stat(workflowPath)
 	if os.IsNotExist(err) {

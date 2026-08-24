@@ -127,7 +127,7 @@ func TestLoadTargetsRejectsNonContractFilename(t *testing.T) {
 	path := test.WriteFile(t, workflowTestDir(t), "deploy_workflow_dispatch.yml", "env: {}\n")
 
 	_, err := LoadTargets(path)
-	if err == nil || !strings.Contains(err.Error(), "<name>_assert.yml") {
+	if err == nil || !strings.Contains(err.Error(), "contract must be placed") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -155,10 +155,39 @@ func TestLoadTargetsRejectsWorkflowContractOutsideWorkflowDirectory(t *testing.T
 }
 
 func TestLoadTargetsKeepsCompositeActionContractNaming(t *testing.T) {
-	path := test.WriteFile(t, t.TempDir(), "action_assert.yml", "env: {}\n")
-
-	if _, err := LoadTargets(path); err != nil {
+	root := t.TempDir()
+	dir := filepath.Join(root, ".github", "actions", "deploy")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
+	}
+	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
+
+	for _, target := range []string{path, root} {
+		if _, err := LoadTargets(target); err != nil {
+			t.Fatalf("LoadTargets(%q) error = %v", target, err)
+		}
+	}
+}
+
+func TestLoadTargetsRejectsActionContractFilenameOutsideActions(t *testing.T) {
+	dir := t.TempDir()
+	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
+
+	for _, target := range []string{path, dir} {
+		_, err := LoadTargets(target)
+		if err == nil || !strings.Contains(err.Error(), ".github/actions") {
+			t.Fatalf("LoadTargets(%q) error = %v", target, err)
+		}
+	}
+}
+
+func TestLoadTargetsTreatsActionAssertInWorkflowsAsWorkflowContract(t *testing.T) {
+	dir := workflowTestDir(t)
+	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
+
+	_, err := LoadTargets(path)
+	if err == nil || !strings.Contains(err.Error(), "corresponding workflow") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
