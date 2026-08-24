@@ -20,7 +20,7 @@ func TestAssertRequiredEnvironment(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, assert(c, tt.env, nil), tt.want)
+			assertViolationCount(t, assert(c.Env, c.Inputs, tt.env, nil), tt.want)
 		})
 	}
 }
@@ -40,7 +40,7 @@ func TestAssertEnvironmentConstraints(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, assert(c, tt.env, nil), tt.want)
+			assertViolationCount(t, assert(c.Env, c.Inputs, tt.env, nil), tt.want)
 		})
 	}
 }
@@ -62,14 +62,14 @@ func TestAssertWorkflowInputs(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			assertViolationCount(t, assert(c, nil, tt.inputs), tt.want)
+			assertViolationCount(t, assert(c.Env, c.Inputs, nil, tt.inputs), tt.want)
 		})
 	}
 }
 
 func TestAssertReportsScopeAndPosition(t *testing.T) {
 	c := loadContract(t, "inputs.yml")
-	violations := assert(c, values(nil), values{"environment": "develop"})
+	violations := assert(c.Env, c.Inputs, values(nil), values{"environment": "develop"})
 
 	assertScopes(t, violations, scopeInput)
 	if violations[0].Name != "environment" {
@@ -83,7 +83,7 @@ func TestAssertReportsScopeAndPosition(t *testing.T) {
 func TestAssertSeparatesEnvironmentAndInputs(t *testing.T) {
 	c := loadContract(t, "combined.yml")
 
-	assertScopes(t, assert(c, values{"NAME": "develop"}, values{"environment": "develop"}), scopeEnv, scopeInput)
+	assertScopes(t, assert(c.Env, c.Inputs, values{"NAME": "develop"}, values{"environment": "develop"}), scopeEnv, scopeInput)
 }
 
 func TestAssertReadsProcessEnvironment(t *testing.T) {

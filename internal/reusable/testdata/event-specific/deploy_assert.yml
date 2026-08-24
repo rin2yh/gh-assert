@@ -3,6 +3,10 @@ env:
     required: true
     type:
       string: {}
+inputs:
+  retries:
+    type:
+      integer: {}
 on:
   workflow_call:
     inputs:

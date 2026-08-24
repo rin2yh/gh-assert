@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/rhysd/actionlint"
-	"github.com/rin2yh/gh-assert/internal/contract"
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
@@ -24,7 +23,16 @@ func Validate(item model.ContractFile) error {
 	if !reusable {
 		return nil
 	}
-	return compareInputs(path, call, contract.Resolve(item.Contract, "workflow_call").Inputs)
+	contractInputs := item.Contract.Inputs
+	scopedInputs := item.Contract.On["workflow_call"].Inputs
+	if len(scopedInputs) > 0 {
+		contractInputs = maps.Clone(contractInputs)
+		if contractInputs == nil {
+			contractInputs = make(map[string]model.Rule, len(scopedInputs))
+		}
+		maps.Copy(contractInputs, scopedInputs)
+	}
+	return compareInputs(path, call, contractInputs)
 }
 
 func load(contractPath string) (*actionlint.Workflow, string, error) {

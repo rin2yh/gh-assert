@@ -4,6 +4,8 @@ on:
       environment:
         required: true
         type: string
+      retries:
+        type: number
   workflow_dispatch:
     inputs:
       deploy_type:
