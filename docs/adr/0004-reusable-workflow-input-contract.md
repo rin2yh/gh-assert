@@ -8,7 +8,7 @@ input名、`required`、`type`はWorkflow YAMLとcontractを比較できる。�
 
 ## Decision
 
-`<name>_assert.yml`と同じ場所にある`<name>.yml`が`workflow_call`を宣言している場合、gh-assertは`workflow_call.inputs`とcontractの共通`inputs`および`on.workflow_call.inputs`を静的に比較する。比較するのはinput名、`required`、`type`である。contractの`integer`はGitHub Actionsの`number`に対応させる。
+Workflowとcontractは`<name>.yml`と`<name>_assert.yml`の1対1とし、対応するWorkflowがないcontractはエラーにする。eventごとの差分は別contractへ分割せず、同じcontractの`on.<event>`へ記述する。Workflowが`workflow_call`を宣言している場合、gh-assertは`workflow_call.inputs`とcontractの共通`inputs`および`on.workflow_call.inputs`を静的に比較する。比較するのはinput名、`required`、`type`である。contractの`integer`はGitHub Actionsの`number`に対応させる。
 
 runtime assertionでは、Reusable Workflow内からActionの`inputs`へ`${{ toJSON(inputs) }}`を渡す。Actionはこの値を`GH_ASSERT_INPUTS`としてCLIへ渡し、共通`inputs`および`on.workflow_call.inputs`のtypeと制約を検証する。envには共通`env`および`on.<GITHUB_EVENT_NAME>.env`を適用する。Reusable Workflowのinput contractがあるのに値が渡されなかった場合は、検証をskipせずエラーにする。
 

@@ -2,6 +2,8 @@ package main
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -30,14 +32,23 @@ func TestValidateRejectsInvalidContract(t *testing.T) {
 	assertContains(t, stderr, "cannot unmarshal", true)
 }
 
+func TestCommandsRejectWorkflowContractWithoutSibling(t *testing.T) {
+	dir := workflowTestDir(t)
+	path := test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
+	for _, args := range [][]string{{"validate", path}, {"--contract", path}} {
+		_, stderr := runCommand(t, args, 2)
+		assertContains(t, stderr, "corresponding workflow", true)
+	}
+}
+
 func TestValidateReusableWorkflowInterface(t *testing.T) {
-	stdout, _ := runCommand(t, []string{"validate", "testdata/reusable/deploy_assert.yml"}, 0)
+	stdout, _ := runCommand(t, []string{"validate", "testdata/reusable/.github/workflows/deploy_assert.yml"}, 0)
 
 	assertContains(t, stdout, "contract is valid", true)
 }
 
 func TestValidateRejectsReusableWorkflowInterfaceMismatch(t *testing.T) {
-	_, stderr := runCommand(t, []string{"validate", "testdata/reusable/mismatch_assert.yml"}, 2)
+	_, stderr := runCommand(t, []string{"validate", "testdata/reusable/.github/workflows/mismatch_assert.yml"}, 2)
 
 	assertContains(t, stderr, "reusable workflow interface does not match contract", true)
 }
@@ -138,7 +149,7 @@ func TestRuntimeReusableWorkflowUsesWorkflowCallInputRules(t *testing.T) {
 	t.Setenv("PUSH_ONLY", "true")
 	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"develop"}`)
 
-	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 1)
+	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/.github/workflows/deploy_assert.yml"}, 1)
 
 	assertContains(t, stderr, "allowed enum", true)
 	assertContains(t, stderr, "develop", false)
@@ -151,7 +162,7 @@ func TestRuntimeReusableWorkflowUsesCallerEventEnvRules(t *testing.T) {
 	t.Setenv("PUSH_ONLY", "invalid")
 	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"staging"}`)
 
-	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 1)
+	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/.github/workflows/deploy_assert.yml"}, 1)
 
 	assertContains(t, stderr, "env PUSH_ONLY", true)
 }
@@ -159,7 +170,7 @@ func TestRuntimeReusableWorkflowUsesCallerEventEnvRules(t *testing.T) {
 func TestRuntimeReusableWorkflowRequiresInputValues(t *testing.T) {
 	t.Setenv("GH_ASSERT_INPUTS", "")
 
-	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 2)
+	_, stderr := runCommand(t, []string{"--contract", "testdata/reusable/.github/workflows/deploy_assert.yml"}, 2)
 
 	assertContains(t, stderr, "inputs:", true)
 }
@@ -169,7 +180,7 @@ func TestRuntimeReusableWorkflowUsesInputsContextForWorkflowDispatchCaller(t *te
 	t.Setenv("FLAG", "true")
 	t.Setenv("GH_ASSERT_INPUTS", `{"environment":"staging"}`)
 
-	runCommand(t, []string{"--contract", "testdata/reusable/deploy_assert.yml"}, 0)
+	runCommand(t, []string{"--contract", "testdata/reusable/.github/workflows/deploy_assert.yml"}, 0)
 }
 
 func TestRuntimeAssertsCompositeActionInputValues(t *testing.T) {
@@ -290,7 +301,18 @@ func setEvent(t *testing.T, payload string) {
 
 func writeContract(t *testing.T, content string) string {
 	t.Helper()
-	return test.WriteFile(t, t.TempDir(), "contract.yml", content)
+	dir := workflowTestDir(t)
+	test.WriteFile(t, dir, "deploy.yml", "on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n")
+	return test.WriteFile(t, dir, "deploy_assert.yml", content)
+}
+
+func workflowTestDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), ".github", "workflows")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return dir
 }
 
 type errorWriter struct{}

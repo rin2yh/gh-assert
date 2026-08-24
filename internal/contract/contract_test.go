@@ -99,7 +99,7 @@ func TestParseValidatesEventSpecificRules(t *testing.T) {
 }
 
 func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
-	dir := t.TempDir()
+	dir := workflowTestDir(t)
 	test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
 	test.WriteFile(t, dir, "deploy.yml", "on: push\n")
 	loaded, err := LoadTargets(dir)
@@ -111,9 +111,69 @@ func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 	}
 }
 
+func TestLoadTargetsRejectsWorkflowContractWithoutSibling(t *testing.T) {
+	dir := workflowTestDir(t)
+	path := test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
+
+	for _, target := range []string{path, dir} {
+		_, err := LoadTargets(target)
+		if err == nil || !strings.Contains(err.Error(), "corresponding workflow") {
+			t.Fatalf("LoadTargets(%q) error = %v", target, err)
+		}
+	}
+}
+
+func TestLoadTargetsRejectsNonContractFilename(t *testing.T) {
+	path := test.WriteFile(t, workflowTestDir(t), "deploy_workflow_dispatch.yml", "env: {}\n")
+
+	_, err := LoadTargets(path)
+	if err == nil || !strings.Contains(err.Error(), "<name>_assert.yml") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadTargetsDoesNotTreatEventSuffixAsWorkflowName(t *testing.T) {
+	dir := workflowTestDir(t)
+	test.WriteFile(t, dir, "deploy.yml", "on: workflow_dispatch\n")
+	path := test.WriteFile(t, dir, "deploy_workflow_dispatch_assert.yml", "env: {}\n")
+
+	_, err := LoadTargets(path)
+	if err == nil || !strings.Contains(err.Error(), "deploy_workflow_dispatch.yml") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadTargetsRejectsWorkflowContractOutsideWorkflowDirectory(t *testing.T) {
+	dir := t.TempDir()
+	test.WriteFile(t, dir, "deploy.yml", "on: push\n")
+	path := test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
+
+	_, err := LoadTargets(path)
+	if err == nil || !strings.Contains(err.Error(), ".github/workflows") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestLoadTargetsKeepsCompositeActionContractNaming(t *testing.T) {
+	path := test.WriteFile(t, t.TempDir(), "action_assert.yml", "env: {}\n")
+
+	if _, err := LoadTargets(path); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestLoadTargetsRejectsEmptyDirectory(t *testing.T) {
 	_, err := LoadTargets(t.TempDir())
 	test.AssertError(t, err)
+}
+
+func workflowTestDir(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), ".github", "workflows")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return dir
 }
 
 func parseFile(t *testing.T, name string) (*model.Contract, error) {

@@ -37,6 +37,8 @@ inputs:
         max: 5
 ```
 
+Each Workflow has exactly one contract. `.github/workflows/<name>_assert.yml` must have the sibling Workflow `.github/workflows/<name>.yml`; a Workflow contract without that exact sibling is invalid. Event-specific rules do not use separate files such as `deploy_workflow_dispatch_assert.yml`. Put them in `on.<event>` in the same contract.
+
 A contract declares `env`, `inputs`, or event-specific additions under `on.<event>`. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
 
 One workflow still uses one contract when different events need different assertions. Top-level rules are common to every event, and the rules for the current `GITHUB_EVENT_NAME` are added at runtime:
@@ -84,7 +86,7 @@ Place the Action in a workflow step and pass the environment values that the con
 
 Replace `<full-length-commit-sha>` with the full commit SHA for a published release, and keep the version comment so Dependabot can track updates. The Action embeds the matching release version, so no separate version input is needed. It runs on Linux, macOS and Windows runners on x64 and arm64, picks the release binary for `RUNNER_OS` and `RUNNER_ARCH`, and verifies it against the release's `checksums.txt` before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
 
-When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
+When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`. Discovery fails if a Workflow contract has no exact sibling Workflow. The same check applies when one contract is specified explicitly.
 
 In a reusable workflow, use the Action normally:
 
