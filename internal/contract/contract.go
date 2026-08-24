@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/rin2yh/gh-assert/internal/model"
-	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 func LoadFile(path string) (*model.Contract, error) {
@@ -75,13 +74,23 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 }
 
 func validateTarget(path string) error {
-	if workflowPath, ok := target.WorkflowPath(path); ok {
+	if workflowPath, ok := workflowPath(path); ok {
 		return validateWorkflowSibling(path, workflowPath)
 	}
-	if _, ok := target.ActionPath(path); ok {
+	if filepath.Base(path) == "action_assert.yml" {
 		return nil
 	}
-	return fmt.Errorf("%s: contract must be placed at .github/workflows/<name>_assert.yml or .github/actions/**/action_assert.yml", path)
+	return fmt.Errorf("%s: contract must be placed at .github/workflows/<name>_assert.yml or named action_assert.yml", path)
+}
+
+func workflowPath(contractPath string) (string, bool) {
+	const suffix = "_assert.yml"
+	dir := filepath.Dir(contractPath)
+	if !strings.HasSuffix(filepath.Base(contractPath), suffix) ||
+		filepath.Base(dir) != "workflows" || filepath.Base(filepath.Dir(dir)) != ".github" {
+		return "", false
+	}
+	return strings.TrimSuffix(contractPath, suffix) + ".yml", true
 }
 
 func validateWorkflowSibling(path, workflowPath string) error {

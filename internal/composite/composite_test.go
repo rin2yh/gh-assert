@@ -81,12 +81,12 @@ func TestIs(t *testing.T) {
 }
 
 func fixtureContractPath(name string) string {
-	return filepath.Join("testdata", name, ".github", "actions", "deploy", contractName)
+	return filepath.Join("testdata", name, contractName)
 }
 
 func TestActionPath(t *testing.T) {
-	got, ok := actionPath(filepath.Join(".github", "actions", "deploy", contractName))
-	want := filepath.Join(".github", "actions", "deploy", "action.yml")
+	got, ok := actionPath(filepath.Join("custom", "deploy", contractName))
+	want := filepath.Join("custom", "deploy", "action.yml")
 	if !ok || got != want {
 		t.Fatalf("actionPath() = %q, %t, want %q, true", got, ok, want)
 	}

@@ -154,28 +154,17 @@ func TestLoadTargetsRejectsWorkflowContractOutsideWorkflowDirectory(t *testing.T
 	}
 }
 
-func TestLoadTargetsKeepsCompositeActionContractNaming(t *testing.T) {
+func TestLoadTargetsAcceptsCompositeActionContractOutsideGitHubActions(t *testing.T) {
 	root := t.TempDir()
-	dir := filepath.Join(root, ".github", "actions", "deploy")
+	dir := filepath.Join(root, "custom", "deploy")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	test.WriteFile(t, dir, "action.yml", "name: deploy\nruns:\n  using: composite\n  steps: []\n")
 	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
 
 	for _, target := range []string{path, root} {
 		if _, err := LoadTargets(target); err != nil {
-			t.Fatalf("LoadTargets(%q) error = %v", target, err)
-		}
-	}
-}
-
-func TestLoadTargetsRejectsActionContractFilenameOutsideActions(t *testing.T) {
-	dir := t.TempDir()
-	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
-
-	for _, target := range []string{path, dir} {
-		_, err := LoadTargets(target)
-		if err == nil || !strings.Contains(err.Error(), ".github/actions") {
 			t.Fatalf("LoadTargets(%q) error = %v", target, err)
 		}
 	}

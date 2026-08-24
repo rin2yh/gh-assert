@@ -10,7 +10,6 @@ import (
 
 	"github.com/rin2yh/gh-assert/internal/github"
 	"github.com/rin2yh/gh-assert/internal/model"
-	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 const contractName = "action_assert.yml"
@@ -47,7 +46,12 @@ func load(contractPath string) (*github.Action, string, error) {
 }
 
 func actionPath(contractPath string) (string, bool) {
-	return target.ActionPath(contractPath)
+	dir := filepath.Dir(contractPath)
+	if filepath.Base(contractPath) != contractName ||
+		filepath.Base(dir) == "workflows" && filepath.Base(filepath.Dir(dir)) == ".github" {
+		return "", false
+	}
+	return filepath.Join(dir, "action.yml"), true
 }
 
 func compareInputs(path string, actionInputs map[string]github.ActionInput, contractInputs map[string]model.Rule) error {
