@@ -37,7 +37,7 @@ func TestCommandsRejectWorkflowContractWithoutSibling(t *testing.T) {
 	path := test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
 	for _, args := range [][]string{{"validate", path}, {"--contract", path}} {
 		_, stderr := runCommand(t, args, 2)
-		assertContains(t, stderr, "corresponding workflow", true)
+		assertContains(t, stderr, "neither a Workflow nor a Composite Action", true)
 	}
 }
 

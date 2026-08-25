@@ -14,9 +14,18 @@ type EventContract struct {
 }
 
 type ContractFile struct {
-	Path     string
-	Contract *Contract
+	Path        string
+	SiblingPath string
+	Kind        ContractKind
+	Contract    *Contract
 }
+
+type ContractKind string
+
+const (
+	WorkflowContract        ContractKind = "workflow"
+	CompositeActionContract ContractKind = "composite-action"
+)
 
 type Rule struct {
 	Required     bool     `yaml:"required,omitempty"`

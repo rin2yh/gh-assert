@@ -37,7 +37,7 @@ inputs:
         max: 5
 ```
 
-Each Workflow has exactly one contract. `.github/workflows/<name>_assert.yml` must have the sibling Workflow `.github/workflows/<name>.yml`; a Workflow contract without that exact sibling is invalid. Event-specific rules do not use separate files such as `deploy_workflow_dispatch_assert.yml`. Put them in `on.<event>` in the same contract.
+Each Workflow has exactly one contract. A `<name>_assert.yml` contract is matched with its sibling `<name>.yml`; the sibling must parse as a Workflow. An `action_assert.yml` contract is matched with `action.yml` when that sibling parses as a Composite Action. Targets are identified from the sibling contents rather than their directory. Ambiguous and unrecognized pairs are invalid. Event-specific rules do not use separate files such as `deploy_workflow_dispatch_assert.yml`. Put them in `on.<event>` in the same contract.
 
 A contract declares `env`, `inputs`, or event-specific additions under `on.<event>`. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
 

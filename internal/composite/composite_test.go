@@ -16,7 +16,7 @@ func TestValidateCompositeInterface(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
+	if err := Validate(compositeContractFile(contractPath, c)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -38,7 +38,7 @@ func TestValidateCompositeInterfaceRejectsMismatch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = Validate(model.ContractFile{Path: contractPath, Contract: c})
+			err = Validate(compositeContractFile(contractPath, c))
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("error = %v, want containing %q", err, tt.want)
 			}
@@ -46,51 +46,15 @@ func TestValidateCompositeInterfaceRejectsMismatch(t *testing.T) {
 	}
 }
 
-func TestValidateCompositeInterfaceIgnoresNonCompositeAction(t *testing.T) {
-	contractPath := fixtureContractPath("javascript-action")
-	c, err := contract.LoadFile(contractPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestValidateCompositeInterfaceAllowsMissingAction(t *testing.T) {
-	contractPath := fixtureContractPath("missing-action")
-	c, err := contract.LoadFile(contractPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestIs(t *testing.T) {
-	composite, err := Is(fixtureContractPath("valid"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !composite {
-		t.Fatal("Is() = false, want true")
-	}
-}
-
 func fixtureContractPath(name string) string {
 	return filepath.Join("testdata", name, contractName)
 }
 
-func TestActionPath(t *testing.T) {
-	got, ok := actionPath(filepath.Join("custom", "deploy", contractName))
-	want := filepath.Join("custom", "deploy", "action.yml")
-	if !ok || got != want {
-		t.Fatalf("actionPath() = %q, %t, want %q, true", got, ok, want)
-	}
-	if _, ok := actionPath(filepath.Join(".github", "workflows", contractName)); ok {
-		t.Fatal("actionPath() treated a Workflow contract as a Composite Action contract")
+func compositeContractFile(path string, c *model.Contract) model.ContractFile {
+	return model.ContractFile{
+		Path:        path,
+		SiblingPath: filepath.Join(filepath.Dir(path), "action.yml"),
+		Kind:        model.CompositeActionContract,
+		Contract:    c,
 	}
 }

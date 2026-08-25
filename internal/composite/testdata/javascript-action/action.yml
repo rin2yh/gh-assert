@@ -1,7 +1,0 @@
-name: JavaScript action
-inputs:
-  environment:
-    required: true
-runs:
-  using: node24
-  main: index.js

@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/rin2yh/gh-assert/internal/composite"
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
@@ -48,13 +47,11 @@ type Violation struct {
 
 func Assert(item model.ContractFile) ([]Violation, error) {
 	event := os.Getenv("GITHUB_EVENT_NAME")
-	forwarded, err := composite.Is(item.Path)
-	if err != nil {
-		return nil, err
-	}
+	forwarded := item.Kind == model.CompositeActionContract
 	reusable := false
-	if !forwarded {
-		reusable, err = isReusableWorkflow(item.Path)
+	if item.Kind == model.WorkflowContract {
+		var err error
+		reusable, err = isReusableWorkflow(item.SiblingPath)
 		if err != nil {
 			return nil, err
 		}

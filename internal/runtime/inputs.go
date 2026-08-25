@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/rhysd/actionlint"
 )
@@ -19,14 +17,7 @@ const (
 	inputsJSON       = "GH_ASSERT_INPUTS"
 )
 
-func isReusableWorkflow(contractPath string) (bool, error) {
-	const suffix = "_assert.yml"
-	dir := filepath.Dir(contractPath)
-	if !strings.HasSuffix(filepath.Base(contractPath), suffix) ||
-		filepath.Base(dir) != "workflows" || filepath.Base(filepath.Dir(dir)) != ".github" {
-		return false, nil
-	}
-	path := strings.TrimSuffix(contractPath, suffix) + ".yml"
+func isReusableWorkflow(path string) (bool, error) {
 	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return false, nil

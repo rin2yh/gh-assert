@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rin2yh/gh-assert/internal/model"
+	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 func LoadFile(path string) (*model.Contract, error) {
@@ -31,14 +32,15 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 		return nil, err
 	}
 	if !info.IsDir() {
-		if err := validateTarget(path); err != nil {
+		kind, siblingPath, err := target.Classify(path)
+		if err != nil {
 			return nil, err
 		}
 		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		return []model.ContractFile{{Path: path, Contract: parsed}}, nil
+		return []model.ContractFile{{Path: path, SiblingPath: siblingPath, Kind: kind, Contract: parsed}}, nil
 	}
 
 	var paths []string
@@ -61,50 +63,17 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 
 	loaded := make([]model.ContractFile, 0, len(paths))
 	for _, path := range paths {
-		if err := validateTarget(path); err != nil {
+		kind, siblingPath, err := target.Classify(path)
+		if err != nil {
 			return nil, err
 		}
 		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		loaded = append(loaded, model.ContractFile{Path: path, Contract: parsed})
+		loaded = append(loaded, model.ContractFile{Path: path, SiblingPath: siblingPath, Kind: kind, Contract: parsed})
 	}
 	return loaded, nil
-}
-
-func validateTarget(path string) error {
-	if workflowPath, ok := workflowPath(path); ok {
-		return validateWorkflowSibling(path, workflowPath)
-	}
-	if filepath.Base(path) == "action_assert.yml" {
-		return nil
-	}
-	return fmt.Errorf("%s: contract must be placed at .github/workflows/<name>_assert.yml or named action_assert.yml", path)
-}
-
-func workflowPath(contractPath string) (string, bool) {
-	const suffix = "_assert.yml"
-	dir := filepath.Dir(contractPath)
-	if !strings.HasSuffix(filepath.Base(contractPath), suffix) ||
-		filepath.Base(dir) != "workflows" || filepath.Base(filepath.Dir(dir)) != ".github" {
-		return "", false
-	}
-	return strings.TrimSuffix(contractPath, suffix) + ".yml", true
-}
-
-func validateWorkflowSibling(path, workflowPath string) error {
-	info, err := os.Stat(workflowPath)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("%s: corresponding workflow %s does not exist", path, workflowPath)
-	}
-	if err != nil {
-		return err
-	}
-	if info.IsDir() {
-		return fmt.Errorf("%s: corresponding workflow %s is not a file", path, workflowPath)
-	}
-	return nil
 }
 
 // Validate checks a parsed contract without preparing it for runtime use.

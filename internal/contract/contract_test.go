@@ -101,12 +101,12 @@ func TestParseValidatesEventSpecificRules(t *testing.T) {
 func TestLoadTargetsDiscoversAssertFiles(t *testing.T) {
 	dir := workflowTestDir(t)
 	test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
-	test.WriteFile(t, dir, "deploy.yml", "on: push\n")
+	test.WriteFile(t, dir, "deploy.yml", validWorkflowYAML)
 	loaded, err := LoadTargets(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(loaded) != 1 || filepath.Base(loaded[0].Path) != "deploy_assert.yml" {
+	if len(loaded) != 1 || filepath.Base(loaded[0].Path) != "deploy_assert.yml" || loaded[0].Kind != model.WorkflowContract {
 		t.Fatalf("unexpected targets: %#v", loaded)
 	}
 }
@@ -117,7 +117,7 @@ func TestLoadTargetsRejectsWorkflowContractWithoutSibling(t *testing.T) {
 
 	for _, target := range []string{path, dir} {
 		_, err := LoadTargets(target)
-		if err == nil || !strings.Contains(err.Error(), "corresponding workflow") {
+		if err == nil || !strings.Contains(err.Error(), "neither") {
 			t.Fatalf("LoadTargets(%q) error = %v", target, err)
 		}
 	}
@@ -127,30 +127,33 @@ func TestLoadTargetsRejectsNonContractFilename(t *testing.T) {
 	path := test.WriteFile(t, workflowTestDir(t), "deploy_workflow_dispatch.yml", "env: {}\n")
 
 	_, err := LoadTargets(path)
-	if err == nil || !strings.Contains(err.Error(), "contract must be placed") {
+	if err == nil || !strings.Contains(err.Error(), "must be named") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestLoadTargetsDoesNotTreatEventSuffixAsWorkflowName(t *testing.T) {
 	dir := workflowTestDir(t)
-	test.WriteFile(t, dir, "deploy.yml", "on: workflow_dispatch\n")
+	test.WriteFile(t, dir, "deploy.yml", validWorkflowYAML)
 	path := test.WriteFile(t, dir, "deploy_workflow_dispatch_assert.yml", "env: {}\n")
 
 	_, err := LoadTargets(path)
-	if err == nil || !strings.Contains(err.Error(), "deploy_workflow_dispatch.yml") {
+	if err == nil || !strings.Contains(err.Error(), "neither") {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestLoadTargetsRejectsWorkflowContractOutsideWorkflowDirectory(t *testing.T) {
+func TestLoadTargetsAcceptsWorkflowContractOutsideWorkflowDirectory(t *testing.T) {
 	dir := t.TempDir()
-	test.WriteFile(t, dir, "deploy.yml", "on: push\n")
+	test.WriteFile(t, dir, "deploy.yml", validWorkflowYAML)
 	path := test.WriteFile(t, dir, "deploy_assert.yml", "env: {}\n")
 
-	_, err := LoadTargets(path)
-	if err == nil || !strings.Contains(err.Error(), ".github/workflows") {
-		t.Fatalf("unexpected error: %v", err)
+	loaded, err := LoadTargets(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded[0].Kind != model.WorkflowContract {
+		t.Fatalf("kind = %q, want %q", loaded[0].Kind, model.WorkflowContract)
 	}
 }
 
@@ -164,19 +167,27 @@ func TestLoadTargetsAcceptsCompositeActionContractOutsideGitHubActions(t *testin
 	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
 
 	for _, target := range []string{path, root} {
-		if _, err := LoadTargets(target); err != nil {
+		loaded, err := LoadTargets(target)
+		if err != nil {
 			t.Fatalf("LoadTargets(%q) error = %v", target, err)
+		}
+		if loaded[0].Kind != model.CompositeActionContract {
+			t.Fatalf("kind = %q, want %q", loaded[0].Kind, model.CompositeActionContract)
 		}
 	}
 }
 
 func TestLoadTargetsTreatsActionAssertInWorkflowsAsWorkflowContract(t *testing.T) {
 	dir := workflowTestDir(t)
-	test.WriteFile(t, dir, "action.yml", "on: push\n")
+	test.WriteFile(t, dir, "action.yml", validWorkflowYAML)
 	path := test.WriteFile(t, dir, "action_assert.yml", "env: {}\n")
 
-	if _, err := LoadTargets(path); err != nil {
+	loaded, err := LoadTargets(path)
+	if err != nil {
 		t.Fatal(err)
+	}
+	if loaded[0].Kind != model.WorkflowContract {
+		t.Fatalf("kind = %q, want %q", loaded[0].Kind, model.WorkflowContract)
 	}
 }
 
@@ -193,6 +204,8 @@ func workflowTestDir(t *testing.T) string {
 	}
 	return dir
 }
+
+const validWorkflowYAML = "on: push\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n"
 
 func parseFile(t *testing.T, name string) (*model.Contract, error) {
 	t.Helper()

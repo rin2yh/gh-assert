@@ -12,11 +12,13 @@ import (
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
-// Validate compares a reusable workflow's public input interface with its
-// sibling contract. Contracts without a reusable sibling are ignored.
+// Validate compares a reusable workflow's public input interface with its sibling contract.
 func Validate(item model.ContractFile) error {
-	workflow, path, err := load(item.Path)
-	if err != nil || workflow == nil {
+	if item.Kind != model.WorkflowContract {
+		return nil
+	}
+	workflow, err := load(item.SiblingPath)
+	if err != nil {
 		return err
 	}
 	call, reusable := workflow.FindWorkflowCallEvent()
@@ -32,37 +34,20 @@ func Validate(item model.ContractFile) error {
 		}
 		maps.Copy(contractInputs, scopedInputs)
 	}
-	return compareInputs(path, call, contractInputs)
+	return compareInputs(item.SiblingPath, call, contractInputs)
 }
 
-func load(contractPath string) (*actionlint.Workflow, string, error) {
-	path, ok := workflowPath(contractPath)
-	if !ok {
-		return nil, "", nil
-	}
+func load(path string) (*actionlint.Workflow, error) {
 	data, err := os.ReadFile(path)
-	if os.IsNotExist(err) {
-		return nil, path, nil
-	}
 	if err != nil {
-		return nil, path, err
+		return nil, err
 	}
 	workflow, parseErrors := actionlint.Parse(data)
 	if len(parseErrors) > 0 {
 		first := parseErrors[0]
-		return nil, path, fmt.Errorf("%s:%d:%d: %s", path, first.Line, first.Column, first.Message)
+		return nil, fmt.Errorf("%s:%d:%d: %s", path, first.Line, first.Column, first.Message)
 	}
-	return workflow, path, nil
-}
-
-func workflowPath(contractPath string) (string, bool) {
-	const suffix = "_assert.yml"
-	dir := filepath.Dir(contractPath)
-	if !strings.HasSuffix(filepath.Base(contractPath), suffix) ||
-		filepath.Base(dir) != "workflows" || filepath.Base(filepath.Dir(dir)) != ".github" {
-		return "", false
-	}
-	return strings.TrimSuffix(contractPath, suffix) + ".yml", true
+	return workflow, nil
 }
 
 func compareInputs(path string, call *actionlint.WorkflowCallEvent, contractInputs map[string]model.Rule) error {

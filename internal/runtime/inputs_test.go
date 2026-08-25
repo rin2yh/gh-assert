@@ -29,7 +29,7 @@ func TestIsReusableWorkflow(t *testing.T) {
 				test.WriteFile(t, dir, "deploy.yml", tt.workflow)
 			}
 
-			reusable, err := isReusableWorkflow(filepath.Join(dir, "deploy_assert.yml"))
+			reusable, err := isReusableWorkflow(filepath.Join(dir, "deploy.yml"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -37,27 +37,6 @@ func TestIsReusableWorkflow(t *testing.T) {
 				t.Errorf("isReusableWorkflow() = %v, want %v", reusable, tt.want)
 			}
 		})
-	}
-}
-
-func TestIsReusableWorkflowIgnoresCompositeActionContract(t *testing.T) {
-	path := filepath.Join(t.TempDir(), ".github", "actions", "deploy", "action_assert.yml")
-	reusable, err := isReusableWorkflow(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reusable {
-		t.Error("isReusableWorkflow() = true, want false")
-	}
-}
-
-func TestIsReusableWorkflowIgnoresOtherContractNames(t *testing.T) {
-	reusable, err := isReusableWorkflow(filepath.Join(t.TempDir(), "contract.yml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reusable {
-		t.Error("isReusableWorkflow() = true, want false")
 	}
 }
 
