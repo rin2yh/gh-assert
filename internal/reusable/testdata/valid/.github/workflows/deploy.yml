@@ -6,3 +6,8 @@ on:
         type: string
       retries:
         type: number
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo test

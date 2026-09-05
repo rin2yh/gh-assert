@@ -1,0 +1,18 @@
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      retries:
+        type: number
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        required: true
+        type: string
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo test

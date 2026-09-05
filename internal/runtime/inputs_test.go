@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -14,18 +15,21 @@ func TestIsReusableWorkflow(t *testing.T) {
 		workflow string
 		want     bool
 	}{
-		{name: "workflow call", workflow: "on:\n  workflow_call:\n", want: true},
-		{name: "workflow dispatch", workflow: "on: workflow_dispatch\n", want: false},
+		{name: "workflow call", workflow: "on:\n  workflow_call:\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n", want: true},
+		{name: "workflow dispatch", workflow: "on: workflow_dispatch\njobs:\n  test:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo test\n", want: false},
 		{name: "missing workflow", want: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			dir := t.TempDir()
+			dir := filepath.Join(t.TempDir(), ".github", "workflows")
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatal(err)
+			}
 			if tt.workflow != "" {
 				test.WriteFile(t, dir, "deploy.yml", tt.workflow)
 			}
 
-			reusable, err := isReusableWorkflow(filepath.Join(dir, "deploy_assert.yml"))
+			reusable, err := isReusableWorkflow(filepath.Join(dir, "deploy.yml"))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -33,16 +37,6 @@ func TestIsReusableWorkflow(t *testing.T) {
 				t.Errorf("isReusableWorkflow() = %v, want %v", reusable, tt.want)
 			}
 		})
-	}
-}
-
-func TestIsReusableWorkflowIgnoresOtherContractNames(t *testing.T) {
-	reusable, err := isReusableWorkflow(filepath.Join(t.TempDir(), "contract.yml"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if reusable {
-		t.Error("isReusableWorkflow() = true, want false")
 	}
 }
 

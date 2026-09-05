@@ -6,15 +6,16 @@ Workflow、event、`workflow_call.inputs`、`GITHUB_EVENT_NAME`、`GITHUB_EVENT_
 
 ## Decision
 
-GitHub Actionsの仕様に由来する構造と処理を`internal/github`へ置く。Workflowとinputの構造、event名、event payloadの読み取りをこのpackageに含める。
+Workflow YAMLはactionlintでparseし、`actionlint.Workflow` ASTをそのまま利用する。gh-assert独自のWorkflow model、parser、adapter、別構造への変換は持たない。依存するactionlintのversionは`go.mod`で固定する。
 
-Workflow YAMLの読み込みと`github.Workflow`への変換も`internal/github`が担当する。gh-assert独自のcontract YAMLの読み込みは`internal/contract`が担当する。`internal/reusable`はGitHub Workflowとgh-assertのcontractを比較する接続部分とし、cmdへGitHub固有の判定結果を漏らさない。
+Reusable Workflow検証とruntime判定はactionlint ASTを直接参照する。gh-assert独自のcontract YAMLは`internal/contract`、Action metadataは`internal/github`、event payloadの読み取りは`internal/runtime`が担当する。
 
 ## Consequences
 
-GitHub Actionsの仕様変更へ追従する場所が明確になる。GitHub Workflowとgh-assert独自のcontractの解析が別packageに分かれ、Reusable Workflow固有の処理も`internal/reusable`に保たれる。
+Workflow構文の網羅的な解析をactionlintへ任せられ、gh-assert内でGitHub Actions仕様を重複実装せずに済む。gh-assertはactionlint ASTとcontractを直接比較するため、中間modelとの同期も不要になる。
 
 ## References
 
 * [Workflow syntax for GitHub Actions](https://docs.github.com/actions/using-workflows/workflow-syntax-for-github-actions)
 * [Variables reference](https://docs.github.com/en/actions/reference/workflows-and-actions/variables)
+* [rhysd/actionlint](https://github.com/rhysd/actionlint)

@@ -37,7 +37,38 @@ inputs:
         max: 5
 ```
 
-A contract declares `env`, `inputs`, or both. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
+Each Workflow has exactly one contract. A `<name>_assert.yml` contract is matched with its sibling `<name>.yml`; the sibling must parse as a Workflow. An `action_assert.yml` contract is matched with `action.yml` when that sibling parses as a Composite Action. Targets are identified from the sibling contents rather than their directory. Ambiguous and unrecognized pairs are invalid. Event-specific rules do not use separate files such as `deploy_workflow_dispatch_assert.yml`. Put them in `on.<event>` in the same contract.
+
+A contract declares `env`, `inputs`, or event-specific additions under `on.<event>`. Supported constraints are `required`, string `enum` and `pattern`, integer `min` and `max`, and boolean type checking. Defaults, expressions, conditional rules, and step or job contracts are outside the supported contract format.
+
+One workflow still uses one contract when different events need different assertions. Top-level rules are common to every event, and the rules for the current `GITHUB_EVENT_NAME` are added at runtime:
+
+```yaml
+env:
+  CLOUDFLARE_API_TOKEN:
+    required: true
+    type:
+      string: {}
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        required: true
+        type:
+          string:
+            enum: [web, cron, database]
+
+  workflow_run:
+    env:
+      CONCLUSION:
+        required: true
+        type:
+          string:
+            enum: [success]
+```
+
+For `workflow_dispatch`, this example asserts `CLOUDFLARE_API_TOKEN` and `deploy_type`; for `workflow_run`, it asserts `CLOUDFLARE_API_TOKEN` and `CONCLUSION`. Events without a matching `on` section use only the top-level rules.
 
 ## Runtime assertion
 
@@ -55,7 +86,7 @@ Place the Action in a workflow step and pass the environment values that the con
 
 Replace `<full-length-commit-sha>` with the full commit SHA for a published release, and keep the version comment so Dependabot can track updates. The Action embeds the matching release version, so no separate version input is needed. It runs on Linux, macOS and Windows runners on x64 and arm64, picks the release binary for `RUNNER_OS` and `RUNNER_ARCH`, and verifies it against the release's `checksums.txt` before execution. It exits non-zero when a required variable is missing or empty, a value has the wrong type, or a declared constraint fails. Values are not printed in diagnostics.
 
-When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`.
+When `contract` is omitted, the Action discovers every `*_assert.yml` under `.github`. Discovery fails if a Workflow contract has no exact sibling Workflow. The same check applies when one contract is specified explicitly.
 
 In a reusable workflow, use the Action normally:
 
@@ -80,7 +111,7 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
 ```
 
-For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, the Action asserts the explicitly forwarded input values and the declared environment variables.
+For a sibling pair such as `deploy.yml` and `deploy_assert.yml`, gh-assert compares the names, `required` settings and types in `workflow_call.inputs` with the contract. A contract `integer` corresponds to a GitHub Actions `number`. At runtime, inputs use the common rules plus `on.workflow_call.inputs`, while env uses the common rules plus `on.<GITHUB_EVENT_NAME>.env`.
 
 GitHub does not automatically pass a reusable workflow's `inputs` context to a Composite Action, so `inputs: ${{ toJSON(inputs) }}` is required when the contract declares inputs. gh-assert fails instead of silently skipping runtime input assertions when it is omitted. Values are still hidden from diagnostics.
 
@@ -128,7 +159,7 @@ To validate one contract, pass its path as a positional argument.
 gh-assert validate .github/workflows/deploy_assert.yml
 ```
 
-Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges. For Reusable Workflows, it also checks that `workflow_call.inputs` matches the sibling contract's input names, `required` settings and types. For Composite Actions, it checks that the sibling `action.yml` matches the contract's input names and `required` settings. It does not execute a workflow or Action.
+Validation checks YAML syntax, supported fields and types, regular expressions, and integer ranges, including rules under `on.<event>`. For Reusable Workflows, it also checks that `workflow_call.inputs` matches the effective `workflow_call` contract—the common inputs plus `on.workflow_call.inputs`. For Composite Actions, it checks that the sibling `action.yml` matches the contract's input names and `required` settings. It does not execute a workflow or Action.
 
 Runtime assertion follows the same path rule:
 

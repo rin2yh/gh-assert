@@ -8,10 +8,8 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 
-	"github.com/rin2yh/gh-assert/internal/composite"
-	"github.com/rin2yh/gh-assert/internal/github"
+	"github.com/rhysd/actionlint"
 )
 
 const (
@@ -19,29 +17,21 @@ const (
 	inputsJSON       = "GH_ASSERT_INPUTS"
 )
 
-func isReusableWorkflow(contractPath string) (bool, error) {
-	const suffix = "_assert.yml"
-	if !strings.HasSuffix(contractPath, suffix) {
-		return false, nil
-	}
-	path := strings.TrimSuffix(contractPath, suffix) + ".yml"
-	workflow, err := github.NewParser(path).Parse()
+func isReusableWorkflow(path string) (bool, error) {
+	data, err := os.ReadFile(path)
 	if os.IsNotExist(err) {
 		return false, nil
 	}
 	if err != nil {
 		return false, err
 	}
-	_, reusable := workflow.Events["workflow_call"]
-	return reusable, nil
-}
-
-func requiresForwardedInputs(contractPath string) (bool, error) {
-	reusable, err := isReusableWorkflow(contractPath)
-	if err != nil || reusable {
-		return reusable, err
+	workflow, parseErrors := actionlint.Parse(data)
+	if len(parseErrors) > 0 {
+		first := parseErrors[0]
+		return false, fmt.Errorf("%s:%d:%d: %s", path, first.Line, first.Column, first.Message)
 	}
-	return composite.Is(contractPath)
+	_, reusable := workflow.FindWorkflowCallEvent()
+	return reusable, nil
 }
 
 func loadEventInputs() (map[string]string, error) {

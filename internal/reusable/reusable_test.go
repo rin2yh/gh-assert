@@ -16,7 +16,19 @@ func TestValidateReusableInterface(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
+	if err := Validate(workflowContractFile(contractPath, c)); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateReusableInterfaceUsesWorkflowCallRules(t *testing.T) {
+	contractPath := fixtureContractPath("event-specific")
+	c, err := contract.LoadFile(contractPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := Validate(workflowContractFile(contractPath, c)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -39,7 +51,7 @@ func TestValidateReusableInterfaceRejectsMismatch(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = Validate(model.ContractFile{Path: contractPath, Contract: c})
+			err = Validate(workflowContractFile(contractPath, c))
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("error = %v, want containing %q", err, tt.want)
 			}
@@ -54,30 +66,20 @@ func TestValidateReusableInterfaceIgnoresRegularWorkflow(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestValidateReusableInterfaceAllowsMissingWorkflow(t *testing.T) {
-	contractPath := fixtureContractPath("missing-workflow")
-	c, err := contract.LoadFile(contractPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Validate(model.ContractFile{Path: contractPath, Contract: c}); err != nil {
+	if err := Validate(workflowContractFile(contractPath, c)); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func fixtureContractPath(name string) string {
-	return filepath.Join("testdata", name, "deploy_assert.yml")
+	return filepath.Join("testdata", name, ".github", "workflows", "deploy_assert.yml")
 }
 
-func TestWorkflowPath(t *testing.T) {
-	got, ok := workflowPath(filepath.Join(".github", "workflows", "deploy_assert.yml"))
-	if !ok || got != filepath.Join(".github", "workflows", "deploy.yml") {
-		t.Fatalf("workflowPath() = %q, %t", got, ok)
+func workflowContractFile(path string, c *model.Contract) model.ContractFile {
+	return model.ContractFile{
+		Path:        path,
+		SiblingPath: strings.TrimSuffix(path, "_assert.yml") + ".yml",
+		Kind:        model.WorkflowContract,
+		Contract:    c,
 	}
 }

@@ -3,7 +3,6 @@ package composite
 import (
 	"fmt"
 	"maps"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -14,42 +13,21 @@ import (
 
 const contractName = "action_assert.yml"
 
-// Validate compares a Composite Action's public input interface with its
-// sibling contract. Contracts without a Composite Action sibling are ignored.
+// Validate compares a Composite Action's public input interface with its sibling contract.
 func Validate(item model.ContractFile) error {
-	action, path, err := load(item.Path)
-	if err != nil || action == nil || action.Runs.Using != "composite" {
+	if item.Kind != model.CompositeActionContract {
+		return nil
+	}
+	action, err := load(item.SiblingPath)
+	if err != nil {
 		return err
 	}
-	return compareInputs(path, action.Inputs, item.Contract.Inputs)
+	return compareInputs(item.SiblingPath, action.Inputs, item.Contract.Inputs)
 }
 
-// Is reports whether the contract belongs to a sibling Composite Action.
-func Is(contractPath string) (bool, error) {
-	action, _, err := load(contractPath)
-	if err != nil || action == nil {
-		return false, err
-	}
-	return action.Runs.Using == "composite", nil
-}
-
-func load(contractPath string) (*github.Action, string, error) {
-	path, ok := actionPath(contractPath)
-	if !ok {
-		return nil, "", nil
-	}
+func load(path string) (*github.Action, error) {
 	action, err := github.NewActionParser(path).Parse()
-	if os.IsNotExist(err) {
-		return nil, path, nil
-	}
-	return action, path, err
-}
-
-func actionPath(contractPath string) (string, bool) {
-	if filepath.Base(contractPath) != contractName {
-		return "", false
-	}
-	return filepath.Join(filepath.Dir(contractPath), "action.yml"), true
+	return action, err
 }
 
 func compareInputs(path string, actionInputs map[string]github.ActionInput, contractInputs map[string]model.Rule) error {

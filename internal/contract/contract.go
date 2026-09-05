@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/rin2yh/gh-assert/internal/model"
+	"github.com/rin2yh/gh-assert/internal/target"
 )
 
 func LoadFile(path string) (*model.Contract, error) {
@@ -31,11 +32,15 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 		return nil, err
 	}
 	if !info.IsDir() {
+		kind, siblingPath, err := target.Classify(path)
+		if err != nil {
+			return nil, err
+		}
 		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		return []model.ContractFile{{Path: path, Contract: parsed}}, nil
+		return []model.ContractFile{{Path: path, SiblingPath: siblingPath, Kind: kind, Contract: parsed}}, nil
 	}
 
 	var paths []string
@@ -58,24 +63,40 @@ func LoadTargets(path string) ([]model.ContractFile, error) {
 
 	loaded := make([]model.ContractFile, 0, len(paths))
 	for _, path := range paths {
+		kind, siblingPath, err := target.Classify(path)
+		if err != nil {
+			return nil, err
+		}
 		parsed, err := LoadFile(path)
 		if err != nil {
 			return nil, err
 		}
-		loaded = append(loaded, model.ContractFile{Path: path, Contract: parsed})
+		loaded = append(loaded, model.ContractFile{Path: path, SiblingPath: siblingPath, Kind: kind, Contract: parsed})
 	}
 	return loaded, nil
 }
 
 // Validate checks a parsed contract without preparing it for runtime use.
 func Validate(path string, parsed *model.Contract) error {
-	if parsed.Env == nil && parsed.Inputs == nil {
-		return fmt.Errorf("%s: env or inputs is required", path)
+	if parsed.Env == nil && parsed.Inputs == nil && len(parsed.On) == 0 {
+		return fmt.Errorf("%s: env, inputs, or on is required", path)
 	}
 	if err := validateSection("env", parsed.Env); err != nil {
 		return err
 	}
-	return validateSection("inputs", parsed.Inputs)
+	if err := validateSection("inputs", parsed.Inputs); err != nil {
+		return err
+	}
+	for _, event := range slices.Sorted(maps.Keys(parsed.On)) {
+		scoped := parsed.On[event]
+		if err := validateSection("on."+event+".env", scoped.Env); err != nil {
+			return err
+		}
+		if err := validateSection("on."+event+".inputs", scoped.Inputs); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func validateSection(section string, rules map[string]model.Rule) error {
@@ -120,7 +141,11 @@ func validateRule(section, name string, rule model.Rule, position model.Position
 
 // Compile prepares a validated contract for runtime use.
 func Compile(parsed *model.Contract) {
-	for _, rules := range []map[string]model.Rule{parsed.Env, parsed.Inputs} {
+	sections := []map[string]model.Rule{parsed.Env, parsed.Inputs}
+	for _, event := range parsed.On {
+		sections = append(sections, event.Env, event.Inputs)
+	}
+	for _, rules := range sections {
 		for name, rule := range rules {
 			switch {
 			case rule.Type.String != nil:

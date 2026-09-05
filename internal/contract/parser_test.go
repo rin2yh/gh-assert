@@ -25,6 +25,21 @@ func TestParserParse(t *testing.T) {
 	}
 }
 
+func TestParserParseEventSpecificRules(t *testing.T) {
+	path := filepath.Join("testdata", "event-specific.yml")
+	parsed, err := NewParser(path).Parse()
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule := parsed.On["workflow_dispatch"].Inputs["deploy_type"]
+	if !rule.Required || rule.Type.String == nil || len(rule.Type.String.Enum) != 2 {
+		t.Fatalf("unexpected event-specific rule: %#v", rule)
+	}
+	if rule.Position.Path != path || rule.Position.Line == 0 || rule.TypePosition.Line == 0 {
+		t.Fatalf("event-specific positions were not parsed: %#v", rule)
+	}
+}
+
 func TestParserRejectsUnknownField(t *testing.T) {
 	path := filepath.Join("testdata", "unknown_contract.yml")
 	_, err := NewParser(path).Parse()

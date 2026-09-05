@@ -1,0 +1,22 @@
+env:
+  TOKEN:
+    required: true
+    type:
+      string: {}
+inputs:
+  retries:
+    type:
+      integer: {}
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type:
+          string: {}
+  workflow_dispatch:
+    inputs:
+      deploy_type:
+        required: true
+        type:
+          string: {}

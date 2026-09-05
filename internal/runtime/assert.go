@@ -46,14 +46,27 @@ type Violation struct {
 }
 
 func Assert(item model.ContractFile) ([]Violation, error) {
-	if len(item.Contract.Inputs) == 0 {
-		return assert(item.Contract, environment{}, values(nil)), nil
+	event := os.Getenv("GITHUB_EVENT_NAME")
+	forwarded := item.Kind == model.CompositeActionContract
+	reusable := false
+	if item.Kind == model.WorkflowContract {
+		var err error
+		reusable, err = isReusableWorkflow(item.SiblingPath)
+		if err != nil {
+			return nil, err
+		}
+		forwarded = reusable
+	}
+	envRules := mergeRules(item.Contract.Env, item.Contract.On[event].Env)
+	inputEvent := event
+	if reusable {
+		inputEvent = "workflow_call"
+	}
+	inputRules := mergeRules(item.Contract.Inputs, item.Contract.On[inputEvent].Inputs)
+	if len(inputRules) == 0 {
+		return assert(envRules, inputRules, environment{}, values(nil)), nil
 	}
 
-	forwarded, err := requiresForwardedInputs(item.Path)
-	if err != nil {
-		return nil, err
-	}
 	if forwarded {
 		if os.Getenv(inputsJSON) == "" {
 			return nil, fmt.Errorf("%s: inputs must be passed with inputs: ${{ toJSON(inputs) }}", item.Path)
@@ -62,16 +75,15 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
-		return assert(item.Contract, environment{}, values(inputs)), nil
+		return assert(envRules, inputRules, environment{}, values(inputs)), nil
 	}
 
-	event := os.Getenv("GITHUB_EVENT_NAME")
 	if event == workflowDispatch {
 		inputs, err := loadEventInputs()
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", item.Path, err)
 		}
-		return assert(item.Contract, environment{}, values(inputs)), nil
+		return assert(envRules, inputRules, environment{}, values(inputs)), nil
 	}
 
 	if event == "" {
@@ -80,9 +92,21 @@ func Assert(item model.ContractFile) ([]Violation, error) {
 	return nil, fmt.Errorf("%s: an inputs contract requires a %s run, but the current event is %s", item.Path, workflowDispatch, event)
 }
 
-func assert(c *model.Contract, env, inputs source) []Violation {
-	out := assertSection(envSection, c.Env, env)
-	return append(out, assertSection(inputSection, c.Inputs, inputs)...)
+func mergeRules(common, scoped map[string]model.Rule) map[string]model.Rule {
+	if len(scoped) == 0 {
+		return common
+	}
+	merged := maps.Clone(common)
+	if merged == nil {
+		merged = make(map[string]model.Rule, len(scoped))
+	}
+	maps.Copy(merged, scoped)
+	return merged
+}
+
+func assert(envRules, inputRules map[string]model.Rule, env, inputs source) []Violation {
+	out := assertSection(envSection, envRules, env)
+	return append(out, assertSection(inputSection, inputRules, inputs)...)
 }
 
 func assertSection(section section, rules map[string]model.Rule, source source) []Violation {

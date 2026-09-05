@@ -8,62 +8,66 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/rin2yh/gh-assert/internal/github"
+	"github.com/rhysd/actionlint"
 	"github.com/rin2yh/gh-assert/internal/model"
 )
 
-// Validate compares a reusable workflow's public input interface with its
-// sibling contract. Contracts without a reusable sibling are ignored.
+// Validate compares a reusable workflow's public input interface with its sibling contract.
 func Validate(item model.ContractFile) error {
-	workflow, path, err := load(item.Path)
-	if err != nil || workflow == nil {
+	if item.Kind != model.WorkflowContract {
+		return nil
+	}
+	workflow, err := load(item.SiblingPath)
+	if err != nil {
 		return err
 	}
-	call, reusable := workflow.Events["workflow_call"]
+	call, reusable := workflow.FindWorkflowCallEvent()
 	if !reusable {
 		return nil
 	}
-	return compareInputs(path, call.Inputs, item.Contract.Inputs)
+	contractInputs := item.Contract.Inputs
+	scopedInputs := item.Contract.On["workflow_call"].Inputs
+	if len(scopedInputs) > 0 {
+		contractInputs = maps.Clone(contractInputs)
+		if contractInputs == nil {
+			contractInputs = make(map[string]model.Rule, len(scopedInputs))
+		}
+		maps.Copy(contractInputs, scopedInputs)
+	}
+	return compareInputs(item.SiblingPath, call, contractInputs)
 }
 
-func load(contractPath string) (*github.Workflow, string, error) {
-	path, ok := workflowPath(contractPath)
-	if !ok {
-		return nil, "", nil
+func load(path string) (*actionlint.Workflow, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
 	}
-	workflow, err := github.NewParser(path).Parse()
-	if os.IsNotExist(err) {
-		return nil, path, nil
+	workflow, parseErrors := actionlint.Parse(data)
+	if len(parseErrors) > 0 {
+		first := parseErrors[0]
+		return nil, fmt.Errorf("%s:%d:%d: %s", path, first.Line, first.Column, first.Message)
 	}
-	return workflow, path, err
+	return workflow, nil
 }
 
-func workflowPath(contractPath string) (string, bool) {
-	const suffix = "_assert.yml"
-	if !strings.HasSuffix(contractPath, suffix) {
-		return "", false
-	}
-	return strings.TrimSuffix(contractPath, suffix) + ".yml", true
-}
-
-func compareInputs(path string, workflowInputs map[string]github.WorkflowInput, contractInputs map[string]model.Rule) error {
+func compareInputs(path string, call *actionlint.WorkflowCallEvent, contractInputs map[string]model.Rule) error {
 	var problems []string
-	for _, name := range slices.Sorted(maps.Keys(workflowInputs)) {
-		declared := workflowInputs[name]
+	for _, declared := range call.Inputs {
+		name := declared.ID
 		rule, ok := contractInputs[name]
 		if !ok {
 			problems = append(problems, fmt.Sprintf("input %s has no contract", name))
 			continue
 		}
-		if declared.Required != rule.Required {
-			problems = append(problems, fmt.Sprintf("input %s required is %t in workflow_call and %t in contract", name, declared.Required, rule.Required))
+		if declared.IsRequired() != rule.Required {
+			problems = append(problems, fmt.Sprintf("input %s required is %t in workflow_call and %t in contract", name, declared.IsRequired(), rule.Required))
 		}
 		if declared.Type != workflowType(rule.Type.Kind) {
-			problems = append(problems, fmt.Sprintf("input %s type is %s in workflow_call and %s in contract", name, declared.Type, rule.Type.Kind))
+			problems = append(problems, fmt.Sprintf("input %s type is %s in workflow_call and %s in contract", name, workflowTypeName(declared.Type), rule.Type.Kind))
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(contractInputs)) {
-		if _, ok := workflowInputs[name]; !ok {
+		if !slices.ContainsFunc(call.Inputs, func(input *actionlint.WorkflowCallEventInput) bool { return input.ID == name }) {
 			problems = append(problems, fmt.Sprintf("contract input %s is not declared by workflow_call", name))
 		}
 	}
@@ -73,9 +77,28 @@ func compareInputs(path string, workflowInputs map[string]github.WorkflowInput, 
 	return fmt.Errorf("%s: reusable workflow interface does not match contract: %s", filepath.Clean(path), strings.Join(problems, "; "))
 }
 
-func workflowType(contractType string) string {
-	if contractType == "integer" {
-		return "number"
+func workflowType(contractType string) actionlint.WorkflowCallEventInputType {
+	switch contractType {
+	case "boolean":
+		return actionlint.WorkflowCallEventInputTypeBoolean
+	case "integer":
+		return actionlint.WorkflowCallEventInputTypeNumber
+	case "string":
+		return actionlint.WorkflowCallEventInputTypeString
+	default:
+		return actionlint.WorkflowCallEventInputTypeInvalid
 	}
-	return contractType
+}
+
+func workflowTypeName(inputType actionlint.WorkflowCallEventInputType) string {
+	switch inputType {
+	case actionlint.WorkflowCallEventInputTypeBoolean:
+		return "boolean"
+	case actionlint.WorkflowCallEventInputTypeNumber:
+		return "number"
+	case actionlint.WorkflowCallEventInputTypeString:
+		return "string"
+	default:
+		return "invalid"
+	}
 }

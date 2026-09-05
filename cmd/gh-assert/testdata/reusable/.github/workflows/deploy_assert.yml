@@ -1,0 +1,25 @@
+env:
+  FLAG:
+    required: true
+    type:
+      boolean: {}
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type:
+          string:
+            enum: [staging, production]
+  push:
+    env:
+      PUSH_ONLY:
+        required: true
+        type:
+          boolean: {}
+    inputs:
+      environment:
+        required: true
+        type:
+          string:
+            enum: [develop]
