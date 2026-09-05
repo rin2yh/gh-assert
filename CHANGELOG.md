@@ -1,5 +1,10 @@
 # Changelog
 
+## [v0.0.5](https://github.com/rin2yh/gh-assert/compare/v0.0.4...v0.0.5) - 2026-09-05
+
+- feat: support Composite Action contracts by @rin2yh in https://github.com/rin2yh/gh-assert/pull/26
+- feat: support event-specific workflow contracts by @rin2yh in https://github.com/rin2yh/gh-assert/pull/31
+
 ## [v0.0.4](https://github.com/rin2yh/gh-assert/compare/v0.0.3...v0.0.4) - 2026-08-23
 
 - feat: validate reusable workflow inputs by @rin2yh in https://github.com/rin2yh/gh-assert/pull/9
